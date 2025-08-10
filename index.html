@@ -44,6 +44,13 @@
       font-size: 0.9em;
       color: #666;
     }
+    a.map-link {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+    a.map-link:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -52,7 +59,9 @@
   <table>
     <thead>
       <tr>
+        <th>ID</th>
         <th>Estação</th>
+        <th>Coordenadas</th>
         <th>Temperatura (°C)</th>
         <th>Humidade (%)</th>
         <th>Vento</th>
@@ -60,7 +69,7 @@
       </tr>
     </thead>
     <tbody id="weather-tbody">
-      <tr><td colspan="5">A carregar dados...</td></tr>
+      <tr><td colspan="7">A carregar dados...</td></tr>
     </tbody>
   </table>
 
@@ -95,16 +104,24 @@
           const sortedFeatures = [...data.features].sort((a, b) => {
             const tempA = a.properties.temperatura ?? -Infinity;
             const tempB = b.properties.temperatura ?? -Infinity;
-            return tempB - tempA; // ordem decrescente
+            return tempB - tempA;
           });
 
           sortedFeatures.forEach(f => {
             const p = f.properties;
+            const coords = f.geometry?.coordinates || [null, null];
+            const lon = coords[0], lat = coords[1];
+            const mapLink = (lat && lon)
+              ? `<a class="map-link" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}</a>`
+              : "-";
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
+
             const row = `
               <tr>
+                <td>${p.idEstacao || "-"}</td>
                 <td>${p.localEstacao}</td>
+                <td>${mapLink}</td>
                 <td>${p.temperatura?.toFixed(1) ?? "-"}</td>
                 <td>${p.humidade?.toFixed(0) ?? "-"}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
@@ -118,11 +135,11 @@
         .catch(err => {
           console.error(err);
           document.getElementById('weather-tbody').innerHTML =
-            `<tr><td colspan="5">Erro ao carregar dados</td></tr>`;
+            `<tr><td colspan="7">Erro ao carregar dados</td></tr>`;
         });
     }
 
-    // Carrega imediatamente ao abrir a página
+    // Carrega imediatamente
     fetchData();
 
     // Atualiza a cada 15 minutos
