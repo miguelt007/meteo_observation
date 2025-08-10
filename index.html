@@ -1,24 +1,53 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Observações Meteorológicas - IPMA</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background: #f2f2f2; }
     h1 { text-align: center; color: #333; }
-    table { border-collapse: collapse; width: 100%; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-    th { background-color: #4CAF50; color: white; }
-    tr:nth-child(even) { background-color: #f9f9f9; }
-    .wind-icon { display: inline-block; transform-origin: center; }
-    .update-time { text-align: center; margin: 10px 0; font-size: 0.9em; color: #666; }
-    a.map-link { color: #1a73e8; text-decoration: none; }
-    a.map-link:hover { text-decoration: underline; }
-    .temp-hot { background-color: rgba(255, 0, 0, 0.2); font-weight: bold; }
-    .temp-cold { background-color: rgba(0, 128, 255, 0.2); font-weight: bold; }
-    .wind-strong { background-color: rgba(255, 0, 0, 0.2); font-weight: bold; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      background: white;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .wind-icon {
+      display: inline-block;
+      transform-origin: center;
+    }
+    .update-time {
+      text-align: center;
+      margin: 10px 0;
+      font-size: 0.9em;
+      color: #666;
+    }
+    a.map-link {
+      color: #1a73e8;
+      text-decoration: none;
+    }
+    a.map-link:hover {
+      text-decoration: underline;
+    }
+    /* vento forte continua com fundo vermelho suave */
+    .wind-strong {
+      background-color: rgba(255, 0, 0, 0.2);
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -53,6 +82,31 @@
         "W": 270, "WNW": 292.5, "NW": 315, "NNW": 337.5
       };
       return mapping[dir] ?? 0;
+    }
+
+    // Função para interpolar entre duas cores em RGB
+    function lerpColor(color1, color2, t) {
+      return color1.map((c, i) => Math.round(c + (color2[i] - c) * t));
+    }
+
+    // Converte array RGB para string CSS rgb()
+    function rgbToCss(rgb) {
+      return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    }
+
+    // Converte temperatura para cor: de azul (0°C) a vermelho (40°C+)
+    function tempToColor(temp) {
+      if (temp === null || temp === undefined || temp <= -99) return null;
+      const minTemp = 0;
+      const maxTemp = 40;
+      const clamped = Math.min(Math.max(temp, minTemp), maxTemp);
+      // azul: rgb(0, 120, 255)
+      const coldColor = [0, 120, 255];
+      // vermelho: rgb(255, 0, 0)
+      const hotColor = [255, 0, 0];
+      const t = (clamped - minTemp) / (maxTemp - minTemp);
+      const rgb = lerpColor(coldColor, hotColor, t);
+      return rgbToCss(rgb);
     }
 
     function formatValue(value, decimals = 1) {
@@ -91,15 +145,11 @@
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
 
-            // Temperatura
-            let tempValue = formatValue(p.temperatura);
-            let tempClass = "";
-            if (tempValue !== "---") {
-              if (p.temperatura >= 40) tempClass = "temp-hot";
-              else if (p.temperatura <= 10) tempClass = "temp-cold";
-            }
+            // Temperatura com cor gradiente
+            const tempValue = formatValue(p.temperatura);
+            const tempColor = tempToColor(p.temperatura);
 
-            // Vento
+            // Vento forte mantém destaque vermelho
             let windValue = formatValue(p.intensidadeVentoKM);
             let windClass = "";
             if (windValue !== "---" && p.intensidadeVentoKM >= 100) {
@@ -111,7 +161,7 @@
                 <td>${p.idEstacao || "-"}</td>
                 <td>${p.localEstacao}</td>
                 <td>${mapLink}</td>
-                <td class="${tempClass}">${tempValue}</td>
+                <td style="${tempColor ? `background-color: ${tempColor}; font-weight: bold;` : ''}">${tempValue}</td>
                 <td>${formatValue(p.humidade, 0)}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
                 <td class="${windClass}">${windValue}</td>
