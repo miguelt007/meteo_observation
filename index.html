@@ -100,12 +100,23 @@
       const minTemp = 0;
       const maxTemp = 40;
       const clamped = Math.min(Math.max(temp, minTemp), maxTemp);
-      // azul: rgb(0, 120, 255)
-      const coldColor = [0, 120, 255];
-      // vermelho: rgb(255, 0, 0)
-      const hotColor = [255, 0, 0];
+      const coldColor = [0, 120, 255];  // azul
+      const hotColor = [255, 0, 0];     // vermelho
       const t = (clamped - minTemp) / (maxTemp - minTemp);
       const rgb = lerpColor(coldColor, hotColor, t);
+      return rgbToCss(rgb);
+    }
+
+    // Converte humidade para cor: de azul claro (30%) a azul escuro (100%)
+    function humidityToColor(hum) {
+      if (hum === null || hum === undefined || hum <= -99) return null;
+      const minHum = 30;
+      const maxHum = 100;
+      const clamped = Math.min(Math.max(hum, minHum), maxHum);
+      const lightBlue = [173, 216, 230];  // lightblue rgb(173,216,230)
+      const darkBlue = [0, 0, 139];       // darkblue rgb(0,0,139)
+      const t = (clamped - minHum) / (maxHum - minHum);
+      const rgb = lerpColor(lightBlue, darkBlue, t);
       return rgbToCss(rgb);
     }
 
@@ -145,13 +156,19 @@
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
 
-            // Temperatura com cor gradiente e texto ajustado para legibilidade
+            // Temperatura com gradiente e texto ajustado
             const tempValue = formatValue(p.temperatura);
             const tempColor = tempToColor(p.temperatura);
-            const textColor = (p.temperatura !== null && p.temperatura >= 35) ? 'white' : 'black';
-            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold; color: ${textColor} !important;` : '';
+            const tempTextColor = (p.temperatura !== null && p.temperatura >= 35) ? 'white' : 'black';
+            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold; color: ${tempTextColor} !important;` : '';
 
-            // Vento forte mantém destaque vermelho
+            // Humidade com gradiente e texto ajustado
+            const humValue = formatValue(p.humidade, 0);
+            const humColor = humidityToColor(p.humidade);
+            const humTextColor = (p.humidade !== null && p.humidade >= 85) ? 'white' : 'black';
+            const humStyle = humColor ? `background-color: ${humColor}; font-weight: bold; color: ${humTextColor} !important;` : '';
+
+            // Vento forte mantém destaque vermelho suave
             let windValue = formatValue(p.intensidadeVentoKM);
             let windClass = "";
             if (windValue !== "---" && p.intensidadeVentoKM >= 100) {
@@ -164,7 +181,7 @@
                 <td>${p.localEstacao}</td>
                 <td>${mapLink}</td>
                 <td style="${tempStyle}">${tempValue}</td>
-                <td>${formatValue(p.humidade, 0)}</td>
+                <td style="${humStyle}">${humValue}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
                 <td class="${windClass}">${windValue}</td>
               </tr>`;
