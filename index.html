@@ -149,7 +149,7 @@
             const tempValue = formatValue(p.temperatura);
             const tempColor = tempToColor(p.temperatura);
             const textColor = (p.temperatura !== null && p.temperatura >= 35) ? 'white' : 'black';
-            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold; color: ${textColor};` : '';
+            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold; color: ${textColor} !important;` : '';
 
             // Vento forte mantém destaque vermelho
             let windValue = formatValue(p.intensidadeVentoKM);
