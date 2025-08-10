@@ -91,22 +91,30 @@
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
 
+            // Temperatura
+            let tempValue = formatValue(p.temperatura);
             let tempClass = "";
-            if (p.temperatura >= 40) tempClass = "temp-hot";
-            else if (p.temperatura <= 10 && p.temperatura > -99) tempClass = "temp-cold";
+            if (tempValue !== "---") {
+              if (p.temperatura >= 40) tempClass = "temp-hot";
+              else if (p.temperatura <= 10) tempClass = "temp-cold";
+            }
 
+            // Vento
+            let windValue = formatValue(p.intensidadeVentoKM);
             let windClass = "";
-            if (p.intensidadeVentoKM >= 100) windClass = "wind-strong";
+            if (windValue !== "---" && p.intensidadeVentoKM >= 100) {
+              windClass = "wind-strong";
+            }
 
             const row = `
               <tr>
                 <td>${p.idEstacao || "-"}</td>
                 <td>${p.localEstacao}</td>
                 <td>${mapLink}</td>
-                <td class="${tempClass}">${formatValue(p.temperatura)}</td>
+                <td class="${tempClass}">${tempValue}</td>
                 <td>${formatValue(p.humidade, 0)}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
-                <td class="${windClass}">${formatValue(p.intensidadeVentoKM)}</td>
+                <td class="${windClass}">${windValue}</td>
               </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
           });
