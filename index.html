@@ -38,10 +38,17 @@
       display: inline-block;
       transform-origin: center;
     }
+    .update-time {
+      text-align: center;
+      margin: 10px 0;
+      font-size: 0.9em;
+      color: #666;
+    }
   </style>
 </head>
 <body>
   <h1>Observações Meteorológicas - IPMA</h1>
+  <div class="update-time" id="last-update">Última atualização: --:--:--</div>
   <table>
     <thead>
       <tr>
@@ -59,6 +66,7 @@
 
   <script>
     const API_URL = "https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
+    const REFRESH_INTERVAL = 15 * 60 * 1000; // 15 minutos
 
     function mapWindDirToRotation(dir) {
       const mapping = {
@@ -70,31 +78,46 @@
       return mapping[dir] ?? 0;
     }
 
-    fetch(API_URL)
-      .then(res => res.json())
-      .then(data => {
-        const tbody = document.getElementById('weather-tbody');
-        tbody.innerHTML = ""; // Limpa a mensagem inicial
-        data.features.forEach(f => {
-          const p = f.properties;
-          const rotation = mapWindDirToRotation(p.descDirVento);
-          const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
-          const row = `
-            <tr>
-              <td>${p.localEstacao}</td>
-              <td>${p.temperatura?.toFixed(1) ?? "-"}</td>
-              <td>${p.humidade?.toFixed(0) ?? "-"}</td>
-              <td>${p.descDirVento || "-"} ${windIcon}</td>
-              <td>${p.intensidadeVentoKM?.toFixed(1) ?? "-"}</td>
-            </tr>`;
-          tbody.insertAdjacentHTML('beforeend', row);
+    function updateLastUpdateTime() {
+      const now = new Date();
+      document.getElementById("last-update").textContent =
+        `Última atualização: ${now.toLocaleTimeString("pt-PT")}`;
+    }
+
+    function fetchData() {
+      fetch(API_URL)
+        .then(res => res.json())
+        .then(data => {
+          const tbody = document.getElementById('weather-tbody');
+          tbody.innerHTML = "";
+          data.features.forEach(f => {
+            const p = f.properties;
+            const rotation = mapWindDirToRotation(p.descDirVento);
+            const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
+            const row = `
+              <tr>
+                <td>${p.localEstacao}</td>
+                <td>${p.temperatura?.toFixed(1) ?? "-"}</td>
+                <td>${p.humidade?.toFixed(0) ?? "-"}</td>
+                <td>${p.descDirVento || "-"} ${windIcon}</td>
+                <td>${p.intensidadeVentoKM?.toFixed(1) ?? "-"}</td>
+              </tr>`;
+            tbody.insertAdjacentHTML('beforeend', row);
+          });
+          updateLastUpdateTime();
+        })
+        .catch(err => {
+          console.error(err);
+          document.getElementById('weather-tbody').innerHTML =
+            `<tr><td colspan="5">Erro ao carregar dados</td></tr>`;
         });
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById('weather-tbody').innerHTML =
-          `<tr><td colspan="5">Erro ao carregar dados</td></tr>`;
-      });
+    }
+
+    // Carrega imediatamente ao abrir a página
+    fetchData();
+
+    // Atualiza a cada 15 minutos
+    setInterval(fetchData, REFRESH_INTERVAL);
   </script>
 </body>
 </html>
