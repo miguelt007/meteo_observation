@@ -43,7 +43,7 @@
     a.map-link:hover {
       text-decoration: underline;
     }
-    /* vento forte continua com fundo vermelho suave */
+    /* vento forte mantém fundo vermelho suave */
     .wind-strong {
       background-color: rgba(255, 0, 0, 0.2);
       font-weight: bold;
@@ -145,9 +145,11 @@
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
 
-            // Temperatura com cor gradiente
+            // Temperatura com cor gradiente e texto ajustado para legibilidade
             const tempValue = formatValue(p.temperatura);
             const tempColor = tempToColor(p.temperatura);
+            const textColor = (p.temperatura !== null && p.temperatura >= 35) ? 'white' : 'black';
+            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold; color: ${textColor};` : '';
 
             // Vento forte mantém destaque vermelho
             let windValue = formatValue(p.intensidadeVentoKM);
@@ -161,7 +163,7 @@
                 <td>${p.idEstacao || "-"}</td>
                 <td>${p.localEstacao}</td>
                 <td>${mapLink}</td>
-                <td style="${tempColor ? `background-color: ${tempColor}; font-weight: bold;` : ''}">${tempValue}</td>
+                <td style="${tempStyle}">${tempValue}</td>
                 <td>${formatValue(p.humidade, 0)}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
                 <td class="${windClass}">${windValue}</td>
