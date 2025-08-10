@@ -4,67 +4,21 @@
   <meta charset="UTF-8">
   <title>Observações Meteorológicas - IPMA</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- Ícones via Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background: #f2f2f2;
-    }
-    h1 {
-      text-align: center;
-      color: #333;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      background: white;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #4CAF50;
-      color: white;
-    }
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-    .wind-icon {
-      display: inline-block;
-      transform-origin: center;
-    }
-    .update-time {
-      text-align: center;
-      margin: 10px 0;
-      font-size: 0.9em;
-      color: #666;
-    }
-    a.map-link {
-      color: #1a73e8;
-      text-decoration: none;
-    }
-    a.map-link:hover {
-      text-decoration: underline;
-    }
-    /* Temperaturas extremas */
-    .temp-hot {
-      background-color: rgba(255, 0, 0, 0.2); /* vermelho suave */
-      font-weight: bold;
-    }
-    .temp-cold {
-      background-color: rgba(0, 128, 255, 0.2); /* azul suave */
-      font-weight: bold;
-    }
-    /* Ventos muito fortes */
-    .wind-strong {
-      background-color: rgba(255, 0, 0, 0.2); /* vermelho suave */
-      font-weight: bold;
-    }
+    body { font-family: Arial, sans-serif; margin: 20px; background: #f2f2f2; }
+    h1 { text-align: center; color: #333; }
+    table { border-collapse: collapse; width: 100%; background: white; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background-color: #4CAF50; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    .wind-icon { display: inline-block; transform-origin: center; }
+    .update-time { text-align: center; margin: 10px 0; font-size: 0.9em; color: #666; }
+    a.map-link { color: #1a73e8; text-decoration: none; }
+    a.map-link:hover { text-decoration: underline; }
+    .temp-hot { background-color: rgba(255, 0, 0, 0.2); font-weight: bold; }
+    .temp-cold { background-color: rgba(0, 128, 255, 0.2); font-weight: bold; }
+    .wind-strong { background-color: rgba(255, 0, 0, 0.2); font-weight: bold; }
   </style>
 </head>
 <body>
@@ -101,6 +55,13 @@
       return mapping[dir] ?? 0;
     }
 
+    function formatValue(value, decimals = 1) {
+      if (value === null || value === undefined || value <= -99) {
+        return "---";
+      }
+      return value.toFixed(decimals);
+    }
+
     function updateLastUpdateTime() {
       const now = new Date();
       document.getElementById("last-update").textContent =
@@ -114,7 +75,6 @@
           const tbody = document.getElementById('weather-tbody');
           tbody.innerHTML = "";
 
-          // Ordenar por temperatura decrescente
           const sortedFeatures = [...data.features].sort((a, b) => {
             const tempA = a.properties.temperatura ?? -Infinity;
             const tempB = b.properties.temperatura ?? -Infinity;
@@ -131,29 +91,22 @@
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
 
-            // Classe para cor da temperatura
             let tempClass = "";
-            if (p.temperatura >= 40) {
-              tempClass = "temp-hot";
-            } else if (p.temperatura <= 10) {
-              tempClass = "temp-cold";
-            }
+            if (p.temperatura >= 40) tempClass = "temp-hot";
+            else if (p.temperatura <= 10 && p.temperatura > -99) tempClass = "temp-cold";
 
-            // Classe para ventos muito fortes
             let windClass = "";
-            if (p.intensidadeVentoKM >= 100) {
-              windClass = "wind-strong";
-            }
+            if (p.intensidadeVentoKM >= 100) windClass = "wind-strong";
 
             const row = `
               <tr>
                 <td>${p.idEstacao || "-"}</td>
                 <td>${p.localEstacao}</td>
                 <td>${mapLink}</td>
-                <td class="${tempClass}">${p.temperatura?.toFixed(1) ?? "-"}</td>
-                <td>${p.humidade?.toFixed(0) ?? "-"}</td>
+                <td class="${tempClass}">${formatValue(p.temperatura)}</td>
+                <td>${formatValue(p.humidade, 0)}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
-                <td class="${windClass}">${p.intensidadeVentoKM?.toFixed(1) ?? "-"}</td>
+                <td class="${windClass}">${formatValue(p.intensidadeVentoKM)}</td>
               </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
           });
@@ -167,10 +120,7 @@
         });
     }
 
-    // Carrega imediatamente
     fetchData();
-
-    // Atualiza a cada 15 minutos
     setInterval(fetchData, REFRESH_INTERVAL);
   </script>
 </body>
