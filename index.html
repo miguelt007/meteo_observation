@@ -90,7 +90,15 @@
         .then(data => {
           const tbody = document.getElementById('weather-tbody');
           tbody.innerHTML = "";
-          data.features.forEach(f => {
+
+          // Ordenar por temperatura decrescente
+          const sortedFeatures = [...data.features].sort((a, b) => {
+            const tempA = a.properties.temperatura ?? -Infinity;
+            const tempB = b.properties.temperatura ?? -Infinity;
+            return tempB - tempA; // ordem decrescente
+          });
+
+          sortedFeatures.forEach(f => {
             const p = f.properties;
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
@@ -104,6 +112,7 @@
               </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
           });
+
           updateLastUpdateTime();
         })
         .catch(err => {
