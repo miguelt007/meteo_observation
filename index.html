@@ -18,6 +18,7 @@
       border: 1px solid #ddd;
       padding: 8px;
       text-align: center;
+      color: black; /* default texto */
     }
     th {
       background-color: #4CAF50;
@@ -46,6 +47,11 @@
     /* vento forte mantém fundo vermelho suave */
     .wind-strong {
       background-color: rgba(255, 0, 0, 0.2);
+      font-weight: bold;
+    }
+    /* força texto branco para temperatura alta */
+    .temp-high {
+      color: white !important;
       font-weight: bold;
     }
   </style>
@@ -154,8 +160,9 @@
 
             const tempValue = formatValue(p.temperatura);
             const tempColor = tempToColor(p.temperatura);
-            const tempTextColor = (p.temperatura !== null && p.temperatura >= 35) ? 'white' : 'black';
-            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold; color: ${tempTextColor} !important;` : '';
+            // aplicar classe temp-high se >= 35 para texto branco
+            const tempClass = (p.temperatura !== null && p.temperatura >= 35) ? "temp-high" : "";
+            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold;` : '';
 
             const humValue = formatValue(p.humidade, 0);
             const humColor = humidityToColor(p.humidade);
@@ -173,7 +180,7 @@
                 <td>${p.idEstacao || "-"}</td>
                 <td>${p.localEstacao}</td>
                 <td>${mapLink}</td>
-                <td style="${tempStyle}">${tempValue}</td>
+                <td class="${tempClass}" style="${tempStyle}">${tempValue}</td>
                 <td style="${humStyle}">${humValue}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
                 <td class="${windClass}">${windValue}</td>
