@@ -84,17 +84,14 @@
       return mapping[dir] ?? 0;
     }
 
-    // Função para interpolar entre duas cores em RGB
     function lerpColor(color1, color2, t) {
       return color1.map((c, i) => Math.round(c + (color2[i] - c) * t));
     }
 
-    // Converte array RGB para string CSS rgb()
     function rgbToCss(rgb) {
       return `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
     }
 
-    // Converte temperatura para cor: de azul (0°C) a vermelho (40°C+)
     function tempToColor(temp) {
       if (temp === null || temp === undefined || temp <= -99) return null;
       const minTemp = 0;
@@ -107,14 +104,13 @@
       return rgbToCss(rgb);
     }
 
-    // Converte humidade para cor: de azul claro (30%) a azul escuro (100%)
     function humidityToColor(hum) {
       if (hum === null || hum === undefined || hum <= -99) return null;
       const minHum = 30;
       const maxHum = 100;
       const clamped = Math.min(Math.max(hum, minHum), maxHum);
-      const lightBlue = [173, 216, 230];  // lightblue rgb(173,216,230)
-      const darkBlue = [0, 0, 139];       // darkblue rgb(0,0,139)
+      const lightBlue = [173, 216, 230];  // lightblue
+      const darkBlue = [0, 0, 139];       // darkblue
       const t = (clamped - minHum) / (maxHum - minHum);
       const rgb = lerpColor(lightBlue, darkBlue, t);
       return rgbToCss(rgb);
@@ -156,19 +152,16 @@
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
 
-            // Temperatura com gradiente e texto ajustado
             const tempValue = formatValue(p.temperatura);
             const tempColor = tempToColor(p.temperatura);
             const tempTextColor = (p.temperatura !== null && p.temperatura >= 35) ? 'white' : 'black';
             const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold; color: ${tempTextColor} !important;` : '';
 
-            // Humidade com gradiente e texto ajustado
             const humValue = formatValue(p.humidade, 0);
             const humColor = humidityToColor(p.humidade);
             const humTextColor = (p.humidade !== null && p.humidade >= 85) ? 'white' : 'black';
             const humStyle = humColor ? `background-color: ${humColor}; font-weight: bold; color: ${humTextColor} !important;` : '';
 
-            // Vento forte mantém destaque vermelho suave
             let windValue = formatValue(p.intensidadeVentoKM);
             let windClass = "";
             if (windValue !== "---" && p.intensidadeVentoKM >= 100) {
