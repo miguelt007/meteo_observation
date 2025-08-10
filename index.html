@@ -49,11 +49,7 @@
       background-color: rgba(255, 0, 0, 0.2);
       font-weight: bold;
     }
-    /* força texto branco para temperatura alta */
-    .temp-high {
-      color: white !important;
-      font-weight: bold;
-    }
+    /* removida a classe temp-high, pois a cor do texto será forçada via JS */
   </style>
 </head>
 <body>
@@ -153,16 +149,14 @@
             const coords = f.geometry?.coordinates || [null, null];
             const lon = coords[0], lat = coords[1];
             const mapLink = (lat && lon)
-              ? `<a class="map-link" href="https://www.google.com/maps?q=${lat},${lon}" target="_blank">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}</a>`
+              ? `<a class="map-link" href="http://google.com/maps?q=${lat},${lon}" target="_blank">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}</a>`
               : "-";
             const rotation = mapWindDirToRotation(p.descDirVento);
             const windIcon = `<i class="fas fa-arrow-up wind-icon" style="transform: rotate(${rotation}deg);"></i>`;
 
             const tempValue = formatValue(p.temperatura);
             const tempColor = tempToColor(p.temperatura);
-            // aplicar classe temp-high se >= 35 para texto branco
-            const tempClass = (p.temperatura !== null && p.temperatura >= 35) ? "temp-high" : "";
-            const tempStyle = tempColor ? `background-color: ${tempColor}; font-weight: bold;` : '';
+            const tempStyle = tempColor ? `background-color: ${tempColor}; color: white; font-weight: bold;` : '';
 
             const humValue = formatValue(p.humidade, 0);
             const humColor = humidityToColor(p.humidade);
@@ -180,7 +174,7 @@
                 <td>${p.idEstacao || "-"}</td>
                 <td>${p.localEstacao}</td>
                 <td>${mapLink}</td>
-                <td class="${tempClass}" style="${tempStyle}">${tempValue}</td>
+                <td style="${tempStyle}">${tempValue}</td>
                 <td style="${humStyle}">${humValue}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
                 <td class="${windClass}">${windValue}</td>
