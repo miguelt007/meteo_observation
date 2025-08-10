@@ -44,12 +44,10 @@
     a.map-link:hover {
       text-decoration: underline;
     }
-    /* vento forte mantém fundo vermelho suave */
     .wind-strong {
       background-color: rgba(255, 0, 0, 0.2);
       font-weight: bold;
     }
-    /* removida a classe temp-high, pois a cor do texto será forçada via JS */
   </style>
 </head>
 <body>
@@ -63,12 +61,13 @@
         <th>Coordenadas</th>
         <th>Temperatura (°C)</th>
         <th>Humidade (%)</th>
+        <th>Pressão (hPa)</th>
         <th>Vento</th>
         <th>Intensidade (km/h)</th>
       </tr>
     </thead>
     <tbody id="weather-tbody">
-      <tr><td colspan="7">A carregar dados...</td></tr>
+      <tr><td colspan="8">A carregar dados...</td></tr>
     </tbody>
   </table>
 
@@ -162,7 +161,9 @@
             const humColor = humidityToColor(p.humidade);
             const humTextColor = (p.humidade !== null && p.humidade >= 85) ? 'white' : 'black';
             const humStyle = humColor ? `background-color: ${humColor}; font-weight: bold; color: ${humTextColor} !important;` : '';
-
+            
+            const pressaoValue = formatValue(p.pressao, 0);
+            
             let windValue = formatValue(p.intensidadeVentoKM);
             let windClass = "";
             if (windValue !== "---" && p.intensidadeVentoKM >= 100) {
@@ -176,6 +177,7 @@
                 <td>${mapLink}</td>
                 <td style="${tempStyle}">${tempValue}</td>
                 <td style="${humStyle}">${humValue}</td>
+                <td>${pressaoValue}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
                 <td class="${windClass}">${windValue}</td>
               </tr>`;
@@ -187,7 +189,7 @@
         .catch(err => {
           console.error(err);
           document.getElementById('weather-tbody').innerHTML =
-            `<tr><td colspan="7">Erro ao carregar dados</td></tr>`;
+            `<tr><td colspan="8">Erro ao carregar dados</td></tr>`;
         });
     }
 
