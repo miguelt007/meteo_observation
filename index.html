@@ -60,6 +60,11 @@
       background-color: rgba(0, 128, 255, 0.2); /* azul suave */
       font-weight: bold;
     }
+    /* Ventos muito fortes */
+    .wind-strong {
+      background-color: rgba(255, 0, 0, 0.2); /* vermelho suave */
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -134,6 +139,12 @@
               tempClass = "temp-cold";
             }
 
+            // Classe para ventos muito fortes
+            let windClass = "";
+            if (p.intensidadeVentoKM >= 100) {
+              windClass = "wind-strong";
+            }
+
             const row = `
               <tr>
                 <td>${p.idEstacao || "-"}</td>
@@ -142,7 +153,7 @@
                 <td class="${tempClass}">${p.temperatura?.toFixed(1) ?? "-"}</td>
                 <td>${p.humidade?.toFixed(0) ?? "-"}</td>
                 <td>${p.descDirVento || "-"} ${windIcon}</td>
-                <td>${p.intensidadeVentoKM?.toFixed(1) ?? "-"}</td>
+                <td class="${windClass}">${p.intensidadeVentoKM?.toFixed(1) ?? "-"}</td>
               </tr>`;
             tbody.insertAdjacentHTML('beforeend', row);
           });
