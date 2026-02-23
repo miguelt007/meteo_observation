@@ -73,7 +73,6 @@ th,td{
 <script>
 const API = "https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
 
-// Configuração das tabelas
 const tables=[
   ["Temperaturas Máximas","temperatura",true,"°C","hot","fa-temperature-high"],
   ["Temperaturas Mínimas","temperatura",false,"°C","cold","fa-temperature-low"],
@@ -83,7 +82,7 @@ const tables=[
   ["Humidade Mínima","humidade",false,"%","hum","fa-water"]
 ];
 
-// criar tabelas no DOM
+// criar tabelas
 function createTables(){
   const c=document.getElementById("tables");
   c.innerHTML="";
@@ -100,10 +99,10 @@ function createTables(){
 
   c.innerHTML+=`
     <div class="card">
-      <h2><i class="fa fa-chart-line icon"></i>Amplitude Térmica</h2>
+      <h2><i class="fa fa-temperature-half icon"></i>Sensação Térmica</h2>
       <table>
         <tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
-        <tbody id="Amplitude"></tbody>
+        <tbody id="Sensacao"></tbody>
       </table>
     </div>`;
 }
@@ -127,9 +126,16 @@ function fill(id,data,unit,cls){
   });
 }
 
+// calcular sensação térmica (Wind Chill simplificado)
+function sensacaoTermica(T,V){
+  // T em °C, V em km/h
+  if(!valid(T) || !valid(V)) return T;
+  if(T > 10) return T; // acima de 10°C usamos temperatura real
+  return 13.12 + 0.6215*T - 11.37*Math.pow(V,0.16) + 0.3965*T*Math.pow(V,0.16);
+}
+
 // carregar dados e atualizar tabelas
 async function load(){
-
   try{
     const r = await fetch(API);
     const j = await r.json();
@@ -149,20 +155,6 @@ async function load(){
       };
     }).filter(s=>valid(s.temperatura));
 
-    // --- Guardar histórico local para amplitude ---
-    let history = JSON.parse(localStorage.getItem("ipma_history") || "[]");
-
-    // adiciona observações atuais
-    stations.forEach(s=>{
-      history.push({local:s.local, temperatura:s.temperatura, time:timeStr});
-    });
-
-    // mantém apenas observações do dia atual
-    const today = now.toISOString().split("T")[0];
-    history = history.filter(h=> h.time && h.time.split(" ")[0]===today || true); // opcional: se quiseres filtrar por dia
-
-    localStorage.setItem("ipma_history", JSON.stringify(history));
-
     // preencher tabelas principais
     tables.forEach(t=>{
       const name = t[0];
@@ -180,16 +172,16 @@ async function load(){
       fill(name,sorted,unit,cls);
     });
 
-    // calcular amplitude térmica usando o histórico
-    const tempsHist = history.map(h=>h.temperatura).filter(valid);
-    if(tempsHist.length){
-      const amp = Math.max(...tempsHist)-Math.min(...tempsHist);
-      fill("Amplitude",[{
-        local:"Portugal",
-        value:amp,
-        time:timeStr
-      }],"°C","hot");
-    }
+    // calcular sensação térmica por estação
+    const sensacoes = stations
+      .map(s=>{
+        const val = sensacaoTermica(s.temperatura, s.intensidadeVentoKM);
+        return {local:s.local,value:val,time:s.time};
+      })
+      .sort((a,b)=>b.value-a.value)
+      .slice(0,5);
+
+    fill("Sensacao",sensacoes,"°C","hot");
 
     document.getElementById("update").innerHTML="Última atualização: "+timeStr;
 
