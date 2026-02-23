@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Extremos Diários IPMA</title>
+<title>Dashboard IPMA – Sensação Térmica</title>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
@@ -25,6 +25,7 @@ h1{
 #update{
   text-align:center;
   color:#aaa;
+  font-size:0.9em;
 }
 
 .container{
@@ -37,8 +38,14 @@ h1{
 .card{
   background:#0e1635;
   border-radius:15px;
-  box-shadow:0 0 20px #00eaff33;
+  box-shadow:0 0 30px #00eaff33;
   padding:15px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.card.highlight{
+  transform: scale(1.05);
+  box-shadow:0 0 40px #ff5252cc;
 }
 
 table{
@@ -49,6 +56,7 @@ table{
 th,td{
   padding:8px;
   border-bottom:1px solid #ffffff22;
+  transition: background 0.3s;
 }
 
 .hot{color:#ff5252;}
@@ -65,7 +73,7 @@ th,td{
 
 <body>
 
-<h1>🌍 Extremos Diários IPMA</h1>
+<h1>🌍 Dashboard IPMA – Sensação Térmica</h1>
 <div id="update"></div>
 
 <div class="container" id="tables"></div>
@@ -88,7 +96,7 @@ function createTables(){
   c.innerHTML="";
   tables.forEach(t=>{
     c.innerHTML+=`
-      <div class="card">
+      <div class="card" id="card-${t[0]}">
         <h2><i class="fa ${t[5]} icon"></i>${t[0]}</h2>
         <table>
           <tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
@@ -97,9 +105,9 @@ function createTables(){
       </div>`;
   });
 
-  // tabela de sensação térmica
+  // tabela sensação térmica
   c.innerHTML+=`
-    <div class="card">
+    <div class="card" id="card-Sensacao">
       <h2><i class="fa fa-temperature-half icon"></i>Sensação Térmica</h2>
       <table>
         <tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
@@ -113,29 +121,33 @@ function valid(v){
   return v!==null && v!==undefined && !isNaN(v) && v>-90;
 }
 
-// preencher tabela
+// preencher tabela com animação
 function fill(id,data,unit,cls){
   const tb=document.getElementById(id);
   tb.innerHTML="";
-  data.forEach(s=>{
-    tb.innerHTML+=`
-      <tr>
-        <td>${s.local}</td>
-        <td class="${cls}">${s.value.toFixed(1)} ${unit}</td>
-        <td>${s.time}</td>
-      </tr>`;
+  data.forEach((s,i)=>{
+    const tr = document.createElement("tr");
+    if(i===0 && id==="Sensacao"){ // destaca TOP1 sensação térmica
+      tr.style.background="#ff525533";
+      tr.parentNode && tr.parentNode.classList.add("highlight");
+    }
+    tr.innerHTML=`
+      <td>${s.local}</td>
+      <td class="${cls}">${s.value.toFixed(1)} ${unit}</td>
+      <td>${s.time}</td>
+    `;
+    tb.appendChild(tr);
   });
 }
 
-// calcular sensação térmica (Wind Chill simplificado)
+// calcular sensação térmica
 function sensacaoTermica(T,V){
-  // T em °C, V em km/h
   if(!valid(T) || !valid(V)) return T;
-  if(T > 10) return T; // acima de 10°C usamos temperatura real
+  if(T > 10) return T;
   return 13.12 + 0.6215*T - 11.37*Math.pow(V,0.16) + 0.3965*T*Math.pow(V,0.16);
 }
 
-// carregar dados e atualizar tabelas
+// buscar dados e atualizar
 async function load(){
   try{
     const r = await fetch(API);
@@ -173,7 +185,7 @@ async function load(){
       fill(name,sorted,unit,cls);
     });
 
-    // calcular sensação térmica por estação
+    // sensação térmica TOP5
     const sensacoes = stations
       .map(s=>{
         const val = sensacaoTermica(s.temperatura, s.intensidadeVentoKM);
@@ -194,9 +206,8 @@ async function load(){
 createTables();
 load();
 
-// Atualização a cada 15 minutos
+// atualizar a cada 15 minutos
 setInterval(load,15*60*1000);
-
 </script>
 
 </body>
