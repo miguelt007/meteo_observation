@@ -11,7 +11,7 @@
 <style>
 
 body{
-background:#060b1f;
+background:#050816;
 color:white;
 font-family:Segoe UI;
 margin:0;
@@ -36,8 +36,8 @@ padding:20px;
 }
 
 .card{
-background:#0e1635;
-border-radius:14px;
+background:#0c122b;
+border-radius:15px;
 box-shadow:0 0 20px #00eaff33;
 padding:15px;
 }
@@ -54,9 +54,9 @@ border-bottom:1px solid #ffffff22;
 
 .hot{color:#ff5252;}
 .cold{color:#4fc3f7;}
-.hum{color:#81c784;}
-.wind{color:#ffd54f;}
 .rain{color:#4dd0e1;}
+.wind{color:#ffd54f;}
+.hum{color:#81c784;}
 
 </style>
 </head>
@@ -70,7 +70,8 @@ border-bottom:1px solid #ffffff22;
 
 <script>
 
-const API="https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
+const API =
+"https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
 
 const tables=[
 ["Temperaturas Máximas","fa-temperature-high"],
@@ -98,16 +99,31 @@ c.innerHTML+=`
 });
 }
 
-function fill(id,data,unit,cls=""){
+function valid(v){
+return v!==null && v!==undefined && v!=-99;
+}
+
+function top5(data,field,desc=true){
+return data
+.filter(s=>valid(s[field]))
+.sort((a,b)=>desc?
+b[field]-a[field]:
+a[field]-b[field])
+.slice(0,5);
+}
+
+function fill(id,data,field,unit,cls){
 const tb=document.getElementById(id);
 tb.innerHTML="";
 
-data.slice(0,5).forEach(d=>{
+data.forEach(s=>{
 tb.innerHTML+=`
 <tr>
-<td>${d.local}</td>
-<td class="${cls}">${d.value}${unit}</td>
-<td>${d.time}</td>
+<td>${s.local}</td>
+<td class="${cls}">
+${Number(s[field]).toFixed(1)} ${unit}
+</td>
+<td>${s.time}</td>
 </tr>`;
 });
 }
@@ -121,74 +137,73 @@ const stations=j.features.map(f=>{
 
 const p=f.properties;
 
-if(
-p.airTemperature==null ||
-p.airTemperature==-99
-) return null;
-
 return{
-local:p.stationName,
+local:p.local,
+time:p.obsTime?.split(" ")[1] ?? "-",
+
 temp:Number(p.airTemperature),
 hum:Number(p.relativeHumidity),
-rain:Number(p.precipitationIntensity)||0,
-wind:Number(p.windGust)||0,
-time:p.obsTime?.split(" ")[1] ?? "-"
+rain:Number(p.precipitationIntensity),
+wind:Number(p.windGust)
 };
 
-}).filter(Boolean);
+});
 
-/* Temperaturas */
+/* TEMPERATURAS */
 fill(
 "Temperaturas Máximas",
-[...stations].sort((a,b)=>b.temp-a.temp),
-" °C","hot"
+top5(stations,"temp",true),
+"temp","°C","hot"
 );
 
 fill(
 "Temperaturas Mínimas",
-[...stations].sort((a,b)=>a.temp-b.temp),
-" °C","cold"
+top5(stations,"temp",false),
+"temp","°C","cold"
 );
 
-/* Chuva */
+/* CHUVA */
 fill(
 "Chuva Acumulada",
-[...stations].sort((a,b)=>b.rain-a.rain),
-" mm","rain"
+top5(stations,"rain",true),
+"rain","mm","rain"
 );
 
-/* Vento */
+/* VENTO */
 fill(
 "Rajadas Vento",
-[...stations].sort((a,b)=>b.wind-a.wind),
-" km/h","wind"
+top5(stations,"wind",true),
+"wind","km/h","wind"
 );
 
-/* Humidade */
+/* HUMIDADE */
 fill(
 "Humidade Máxima",
-[...stations].sort((a,b)=>b.hum-a.hum),
-"%","hum"
+top5(stations,"hum",true),
+"hum","%","hum"
 );
 
 fill(
 "Humidade Mínima",
-[...stations].sort((a,b)=>a.hum-b.hum),
-"%","hum"
+top5(stations,"hum",false),
+"hum","%","hum"
 );
 
-/* Amplitude nacional */
-const max=Math.max(...stations.map(s=>s.temp));
-const min=Math.min(...stations.map(s=>s.temp));
+/* AMPLITUDE */
+const validTemps=stations
+.filter(s=>valid(s.temp))
+.map(s=>s.temp);
+
+const amp=Math.max(...validTemps)-Math.min(...validTemps);
 
 fill(
 "Amplitude Térmica",
 [{
 local:"Portugal",
-value:(max-min).toFixed(1),
+temp:amp,
 time:new Date().toLocaleTimeString()
 }],
-" °C"
+"temp","°C","hot"
 );
 
 document.getElementById("update").innerHTML=
