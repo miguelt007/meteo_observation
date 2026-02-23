@@ -4,46 +4,51 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Extremos diários IPMA</title>
+<title>Extremos Diários IPMA</title>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
 body{
-background:#060b1f;
-color:white;
-font-family:Segoe UI;
-margin:0;
+  background:#060b1f;
+  color:white;
+  font-family:Segoe UI;
+  margin:0;
 }
 
 h1{
-text-align:center;
-color:#00eaff;
-margin:20px;
+  text-align:center;
+  color:#00eaff;
+  margin:20px;
+}
+
+#update{
+  text-align:center;
+  color:#aaa;
 }
 
 .container{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
-gap:20px;
-padding:20px;
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:20px;
+  padding:20px;
 }
 
 .card{
-background:#0e1635;
-border-radius:15px;
-box-shadow:0 0 20px #00eaff33;
-padding:15px;
+  background:#0e1635;
+  border-radius:15px;
+  box-shadow:0 0 20px #00eaff33;
+  padding:15px;
 }
 
 table{
-width:100%;
-border-collapse:collapse;
+  width:100%;
+  border-collapse:collapse;
 }
 
 th,td{
-padding:8px;
-border-bottom:1px solid #ffffff22;
+  padding:8px;
+  border-bottom:1px solid #ffffff22;
 }
 
 .hot{color:#ff5252;}
@@ -51,141 +56,132 @@ border-bottom:1px solid #ffffff22;
 .rain{color:#4dd0e1;}
 .wind{color:#ffd54f;}
 .hum{color:#81c784;}
+
+.icon{
+  margin-right:5px;
+}
 </style>
 </head>
 
 <body>
 
 <h1>🌍 Extremos Diários IPMA</h1>
-<div id="update" style="text-align:center"></div>
+<div id="update"></div>
 
 <div class="container" id="tables"></div>
 
 <script>
-
-const API="https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
+const API = "https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
 
 const tables=[
-["Temperaturas Máximas","temperatura",true,"°C","hot"],
-["Temperaturas Mínimas","temperatura",false,"°C","cold"],
-["Chuva Acumulada","precAcumulada",true,"mm","rain"],
-["Rajadas Vento","intensidadeVentoKM",true,"km/h","wind"],
-["Humidade Máxima","humidade",true,"%","hum"],
-["Humidade Mínima","humidade",false,"%","hum"]
+  ["Temperaturas Máximas","temperatura",true,"°C","hot","fa-temperature-high"],
+  ["Temperaturas Mínimas","temperatura",false,"°C","cold","fa-temperature-low"],
+  ["Chuva Acumulada","precAcumulada",true,"mm","rain","fa-cloud-rain"],
+  ["Rajadas Vento","intensidadeVentoKM",true,"km/h","wind","fa-wind"],
+  ["Humidade Máxima","humidade",true,"%","hum","fa-droplet"],
+  ["Humidade Mínima","humidade",false,"%","hum","fa-water"]
 ];
 
+// criar cards e tabelas
 function createTables(){
-const c=document.getElementById("tables");
-c.innerHTML="";
+  const c=document.getElementById("tables");
+  c.innerHTML="";
+  tables.forEach(t=>{
+    c.innerHTML+=`
+      <div class="card">
+        <h2><i class="fa ${t[5]} icon"></i>${t[0]}</h2>
+        <table>
+          <tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
+          <tbody id="${t[0]}"></tbody>
+        </table>
+      </div>`;
+  });
 
-tables.forEach(t=>{
-c.innerHTML+=`
-<div class="card">
-<h2>${t[0]}</h2>
-<table>
-<tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
-<tbody id="${t[0]}"></tbody>
-</table>
-</div>`;
-});
-
-c.innerHTML+=`
-<div class="card">
-<h2>Amplitude Térmica</h2>
-<table>
-<tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
-<tbody id="Amplitude"></tbody>
-</table>
-</div>`;
+  c.innerHTML+=`
+    <div class="card">
+      <h2><i class="fa fa-chart-line icon"></i>Amplitude Térmica</h2>
+      <table>
+        <tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
+        <tbody id="Amplitude"></tbody>
+      </table>
+    </div>`;
 }
 
+// valida valor real
 function valid(v){
-return v!==null && !isNaN(v);
+  return v!==null && v!==undefined && !isNaN(v) && v>-90;
 }
 
+// preencher tabela
 function fill(id,data,unit,cls){
-const tb=document.getElementById(id);
-tb.innerHTML="";
-
-data.forEach(s=>{
-tb.innerHTML+=`
-<tr>
-<td>${s.local}</td>
-<td class="${cls}">${s.value.toFixed(1)} ${unit}</td>
-<td>${s.time}</td>
-</tr>`;
-});
+  const tb=document.getElementById(id);
+  tb.innerHTML="";
+  data.forEach(s=>{
+    tb.innerHTML+=`
+      <tr>
+        <td>${s.local}</td>
+        <td class="${cls}">${s.value.toFixed(1)} ${unit}</td>
+        <td>${s.time}</td>
+      </tr>`;
+  });
 }
 
+// buscar dados e preencher tabelas
 async function load(){
+  try{
+    const r = await fetch(API);
+    const j = await r.json();
 
-const r=await fetch(API);
-const j=await r.json();
+    const stations = j.features.map(f=>{
+      const p = f.properties;
+      return {
+        local: p.localEstacao,
+        time: new Date(p.time).toLocaleTimeString(),
+        temperatura: Number(p.temperatura),
+        humidade: Number(p.humidade),
+        precAcumulada: Number(p.precAcumulada),
+        intensidadeVentoKM: Number(p.intensidadeVentoKM)
+      };
+    }).filter(s=>valid(s.temperatura));
 
-const stations=j.features.map(f=>{
+    // preencher cada tabela
+    tables.forEach(t=>{
+      const name = t[0];
+      const field = t[1];
+      const desc = t[2];
+      const unit = t[3];
+      const cls = t[4];
 
-const p=f.properties;
+      const sorted = [...stations]
+        .filter(s=>valid(s[field]))
+        .sort((a,b)=>desc? b[field]-a[field] : a[field]-b[field])
+        .slice(0,5)
+        .map(s=>({local:s.local,value:s[field],time:s.time}));
 
-return{
-local:p.localEstacao,
-time:new Date(p.time).toLocaleTimeString(),
+      fill(name,sorted,unit,cls);
+    });
 
-temperatura:Number(p.temperatura),
-humidade:Number(p.humidade),
-precAcumulada:Number(p.precAcumulada),
-intensidadeVentoKM:Number(p.intensidadeVentoKM)
-};
+    // amplitude térmica nacional
+    const temps = stations.map(s=>s.temperatura).filter(valid);
+    if(temps.length){
+      const amp = Math.max(...temps)-Math.min(...temps);
+      fill("Amplitude",[{
+        local:"Portugal",
+        value:amp,
+        time:new Date().toLocaleTimeString()
+      }],"°C","hot");
+    }
 
-});
+    document.getElementById("update").innerHTML="Última atualização: "+new Date().toLocaleTimeString();
 
-/* tabelas principais */
-tables.forEach(t=>{
-
-const name=t[0];
-const field=t[1];
-const desc=t[2];
-const unit=t[3];
-const cls=t[4];
-
-const sorted=[...stations]
-.filter(s=>valid(s[field]))
-.sort((a,b)=>desc?
-b[field]-a[field]:
-a[field]-b[field])
-.slice(0,5)
-.map(s=>({
-local:s.local,
-value:s[field],
-time:s.time
-}));
-
-fill(name,sorted,unit,cls);
-
-});
-
-/* amplitude nacional */
-const temps=stations
-.filter(s=>valid(s.temperatura))
-.map(s=>s.temperatura);
-
-const amp=Math.max(...temps)-Math.min(...temps);
-
-fill("Amplitude",[
-{
-local:"Portugal",
-value:amp,
-time:new Date().toLocaleTimeString()
-}
-],"°C","hot");
-
-document.getElementById("update").innerHTML=
-"Última atualização: "+new Date().toLocaleTimeString();
-
+  }catch(err){
+    console.error("Erro ao carregar dados IPMA:", err);
+  }
 }
 
 createTables();
 load();
-setInterval(load,300000);
+setInterval(load,300000); // 5 minutos
 
 </script>
 
