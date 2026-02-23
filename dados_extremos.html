@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 
-<title>Extremos Diários IPMA</title>
+<title>Extremos diários IPMA</title>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
-
 body{
-background:#050816;
+background:#060b1f;
 color:white;
 font-family:Segoe UI;
 margin:0;
@@ -23,11 +22,6 @@ color:#00eaff;
 margin:20px;
 }
 
-#update{
-text-align:center;
-color:#aaa;
-}
-
 .container{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
@@ -36,7 +30,7 @@ padding:20px;
 }
 
 .card{
-background:#0c122b;
+background:#0e1635;
 border-radius:15px;
 box-shadow:0 0 20px #00eaff33;
 padding:15px;
@@ -57,30 +51,27 @@ border-bottom:1px solid #ffffff22;
 .rain{color:#4dd0e1;}
 .wind{color:#ffd54f;}
 .hum{color:#81c784;}
-
 </style>
 </head>
 
 <body>
 
 <h1>🌍 Extremos Diários IPMA</h1>
-<div id="update"></div>
+<div id="update" style="text-align:center"></div>
 
 <div class="container" id="tables"></div>
 
 <script>
 
-const API =
-"https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
+const API="https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
 
 const tables=[
-["Temperaturas Máximas","fa-temperature-high"],
-["Temperaturas Mínimas","fa-temperature-low"],
-["Chuva Acumulada","fa-cloud-rain"],
-["Rajadas Vento","fa-wind"],
-["Humidade Máxima","fa-droplet"],
-["Humidade Mínima","fa-water"],
-["Amplitude Térmica","fa-chart-line"]
+["Temperaturas Máximas","temperatura",true,"°C","hot"],
+["Temperaturas Mínimas","temperatura",false,"°C","cold"],
+["Chuva Acumulada","precAcumulada",true,"mm","rain"],
+["Rajadas Vento","intensidadeVentoKM",true,"km/h","wind"],
+["Humidade Máxima","humidade",true,"%","hum"],
+["Humidade Mínima","humidade",false,"%","hum"]
 ];
 
 function createTables(){
@@ -90,29 +81,29 @@ c.innerHTML="";
 tables.forEach(t=>{
 c.innerHTML+=`
 <div class="card">
-<h2><i class="fa ${t[1]}"></i> ${t[0]}</h2>
+<h2>${t[0]}</h2>
 <table>
 <tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
 <tbody id="${t[0]}"></tbody>
 </table>
 </div>`;
 });
+
+c.innerHTML+=`
+<div class="card">
+<h2>Amplitude Térmica</h2>
+<table>
+<tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
+<tbody id="Amplitude"></tbody>
+</table>
+</div>`;
 }
 
 function valid(v){
-return v!==null && v!==undefined && v!=-99;
+return v!==null && !isNaN(v);
 }
 
-function top5(data,field,desc=true){
-return data
-.filter(s=>valid(s[field]))
-.sort((a,b)=>desc?
-b[field]-a[field]:
-a[field]-b[field])
-.slice(0,5);
-}
-
-function fill(id,data,field,unit,cls){
+function fill(id,data,unit,cls){
 const tb=document.getElementById(id);
 tb.innerHTML="";
 
@@ -120,9 +111,7 @@ data.forEach(s=>{
 tb.innerHTML+=`
 <tr>
 <td>${s.local}</td>
-<td class="${cls}">
-${Number(s[field]).toFixed(1)} ${unit}
-</td>
+<td class="${cls}">${s.value.toFixed(1)} ${unit}</td>
 <td>${s.time}</td>
 </tr>`;
 });
@@ -138,73 +127,56 @@ const stations=j.features.map(f=>{
 const p=f.properties;
 
 return{
-local:p.local,
-time:p.obsTime?.split(" ")[1] ?? "-",
+local:p.localEstacao,
+time:new Date(p.time).toLocaleTimeString(),
 
-temp:Number(p.airTemperature),
-hum:Number(p.relativeHumidity),
-rain:Number(p.precipitationIntensity),
-wind:Number(p.windGust)
+temperatura:Number(p.temperatura),
+humidade:Number(p.humidade),
+precAcumulada:Number(p.precAcumulada),
+intensidadeVentoKM:Number(p.intensidadeVentoKM)
 };
 
 });
 
-/* TEMPERATURAS */
-fill(
-"Temperaturas Máximas",
-top5(stations,"temp",true),
-"temp","°C","hot"
-);
+/* tabelas principais */
+tables.forEach(t=>{
 
-fill(
-"Temperaturas Mínimas",
-top5(stations,"temp",false),
-"temp","°C","cold"
-);
+const name=t[0];
+const field=t[1];
+const desc=t[2];
+const unit=t[3];
+const cls=t[4];
 
-/* CHUVA */
-fill(
-"Chuva Acumulada",
-top5(stations,"rain",true),
-"rain","mm","rain"
-);
+const sorted=[...stations]
+.filter(s=>valid(s[field]))
+.sort((a,b)=>desc?
+b[field]-a[field]:
+a[field]-b[field])
+.slice(0,5)
+.map(s=>({
+local:s.local,
+value:s[field],
+time:s.time
+}));
 
-/* VENTO */
-fill(
-"Rajadas Vento",
-top5(stations,"wind",true),
-"wind","km/h","wind"
-);
+fill(name,sorted,unit,cls);
 
-/* HUMIDADE */
-fill(
-"Humidade Máxima",
-top5(stations,"hum",true),
-"hum","%","hum"
-);
+});
 
-fill(
-"Humidade Mínima",
-top5(stations,"hum",false),
-"hum","%","hum"
-);
+/* amplitude nacional */
+const temps=stations
+.filter(s=>valid(s.temperatura))
+.map(s=>s.temperatura);
 
-/* AMPLITUDE */
-const validTemps=stations
-.filter(s=>valid(s.temp))
-.map(s=>s.temp);
+const amp=Math.max(...temps)-Math.min(...temps);
 
-const amp=Math.max(...validTemps)-Math.min(...validTemps);
-
-fill(
-"Amplitude Térmica",
-[{
+fill("Amplitude",[
+{
 local:"Portugal",
-temp:amp,
+value:amp,
 time:new Date().toLocaleTimeString()
-}],
-"temp","°C","hot"
-);
+}
+],"°C","hot");
 
 document.getElementById("update").innerHTML=
 "Última atualização: "+new Date().toLocaleTimeString();
