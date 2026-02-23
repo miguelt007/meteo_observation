@@ -9,52 +9,46 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
-
 body{
-    margin:0;
-    font-family:Segoe UI;
-    background:#050816;
-    color:white;
+margin:0;
+font-family:Segoe UI;
+background:#050816;
+color:white;
 }
 
 h1{
-    text-align:center;
-    color:#00eaff;
-    margin:20px;
+text-align:center;
+color:#00eaff;
+margin:20px;
 }
 
-#updateTime{
-    text-align:center;
-    color:#aaa;
-    margin-bottom:10px;
+#update{
+text-align:center;
+color:#aaa;
 }
 
 .container{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(350px,1fr));
-    gap:20px;
-    padding:20px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+gap:20px;
+padding:20px;
 }
 
 .card{
-    background:linear-gradient(145deg,#0c122b,#060a1c);
-    border-radius:15px;
-    box-shadow:0 0 20px #00eaff33;
-    padding:15px;
-}
-
-.card h2{
-    color:#00ffd5;
+background:#0c122b;
+border-radius:15px;
+box-shadow:0 0 15px #00eaff33;
+padding:15px;
 }
 
 table{
-    width:100%;
-    border-collapse:collapse;
+width:100%;
+border-collapse:collapse;
 }
 
 th,td{
-    padding:8px;
-    border-bottom:1px solid #ffffff22;
+padding:8px;
+border-bottom:1px solid #ffffff22;
 }
 
 .hot{color:#ff5252;}
@@ -62,180 +56,150 @@ th,td{
 .rain{color:#4dd0e1;}
 .wind{color:#ffd54f;}
 .hum{color:#81c784;}
-
 </style>
 </head>
 
 <body>
 
 <h1>🌍 Extremos Diários IPMA</h1>
-<div id="updateTime"></div>
+<div id="update"></div>
 
 <div class="container" id="tables"></div>
 
 <script>
 
-const sections = [
-{title:"Temperaturas Máximas",icon:"fa-temperature-high"},
-{title:"Temperaturas Mínimas",icon:"fa-temperature-low"},
-{title:"Chuva Acumulada",icon:"fa-cloud-rain"},
-{title:"Rajadas Vento",icon:"fa-wind"},
-{title:"Humidade Máxima",icon:"fa-droplet"},
-{title:"Humidade Mínima",icon:"fa-water"},
-{title:"Amplitude Térmica",icon:"fa-chart-line"}
+const API =
+"https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
+
+const sections=[
+["Temperaturas Máximas","fa-temperature-high"],
+["Temperaturas Mínimas","fa-temperature-low"],
+["Chuva Acumulada","fa-cloud-rain"],
+["Rajadas Vento","fa-wind"],
+["Humidade Máxima","fa-droplet"],
+["Humidade Mínima","fa-water"],
+["Amplitude Térmica","fa-chart-line"]
 ];
 
 function createTables(){
-const container=document.getElementById("tables");
-container.innerHTML="";
+const c=document.getElementById("tables");
+c.innerHTML="";
 
-sections.forEach(sec=>{
-container.innerHTML+=`
+sections.forEach(s=>{
+c.innerHTML+=`
 <div class="card">
-<h2><i class="fa ${sec.icon}"></i> ${sec.title}</h2>
+<h2><i class="fa ${s[1]}"></i> ${s[0]}</h2>
 <table>
-<thead>
-<tr>
-<th>Local</th>
-<th>Valor</th>
-<th>Hora</th>
-</tr>
-</thead>
-<tbody id="${sec.title}"></tbody>
+<tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
+<tbody id="${s[0]}"></tbody>
 </table>
 </div>`;
 });
 }
 
-function colorClass(type,value){
-if(value==null) return "";
-
-if(type.includes("Máximas")) return value>30?"hot":"";
-if(type.includes("Mínimas")) return value<5?"cold":"";
-if(type.includes("Chuva")) return "rain";
-if(type.includes("Vento")) return "wind";
-if(type.includes("Humidade")) return "hum";
-
-return "";
-}
-
-function addRows(title,data,unit){
-
-const tbody=document.getElementById(title);
-tbody.innerHTML="";
+function fill(id,data,unit,cls=""){
+const tb=document.getElementById(id);
+tb.innerHTML="";
 
 data.slice(0,5).forEach(d=>{
-
-const cls=colorClass(title,d.value);
-
-tbody.innerHTML+=`
+tb.innerHTML+=`
 <tr>
 <td>${d.local}</td>
-<td class="${cls}">${d.value ?? "-"} ${unit}</td>
+<td class="${cls}">${d.value}${unit}</td>
 <td>${d.time}</td>
 </tr>`;
 });
 }
 
-async function loadData(){
+async function load(){
 
-const res=await fetch(
-"https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson"
-);
+const r=await fetch(API);
+const j=await r.json();
 
-const json=await res.json();
+const stations=j.features
+.map(f=>{
 
-const stations=json.features
-.map(s=>{
+const p=f.properties;
 
-const p=s.properties;
-
-if(!p.local) return null;
-
-let amp=null;
-if(p.tMax!=null && p.tMin!=null)
-amp=(p.tMax-p.tMin).toFixed(1);
+if(!p.temperature) return null;
 
 return{
 local:p.local,
-time:p.obsTime?.split(" ")[1] ?? "-",
-tmax:p.tMax,
-tmin:p.tMin,
-rain:p.precAcum,
-wind:p.ffGust,
-humMax:p.humMax,
-humMin:p.humMin,
-amp:amp
+temp:p.temperature,
+hum:p.humidity,
+rain:p.precipitation ?? 0,
+wind:p.windGust ?? 0,
+time:p.obsTime?.split(" ")[1] ?? "-"
 };
 
 })
 .filter(Boolean);
 
-addRows(
+/* TEMPERATURAS */
+fill(
 "Temperaturas Máximas",
-stations.filter(s=>s.tmax!=null)
-.sort((a,b)=>b.tmax-a.tmax)
-.map(s=>({local:s.local,value:s.tmax,time:s.time}))
-,"°C"
+[...stations].sort((a,b)=>b.temp-a.temp)
+.map(s=>({local:s.local,value:s.temp,time:s.time}))
+,"°C","hot"
 );
 
-addRows(
+fill(
 "Temperaturas Mínimas",
-stations.filter(s=>s.tmin!=null)
-.sort((a,b)=>a.tmin-b.tmin)
-.map(s=>({local:s.local,value:s.tmin,time:s.time}))
-,"°C"
+[...stations].sort((a,b)=>a.temp-b.temp)
+.map(s=>({local:s.local,value:s.temp,time:s.time}))
+,"°C","cold"
 );
 
-addRows(
+/* CHUVA */
+fill(
 "Chuva Acumulada",
-stations.filter(s=>s.rain!=null)
-.sort((a,b)=>b.rain-a.rain)
+[...stations].sort((a,b)=>b.rain-a.rain)
 .map(s=>({local:s.local,value:s.rain,time:s.time}))
-,"mm"
+," mm","rain"
 );
 
-addRows(
+/* VENTO */
+fill(
 "Rajadas Vento",
-stations.filter(s=>s.wind!=null)
-.sort((a,b)=>b.wind-a.wind)
+[...stations].sort((a,b)=>b.wind-a.wind)
 .map(s=>({local:s.local,value:s.wind,time:s.time}))
-,"km/h"
+," km/h","wind"
 );
 
-addRows(
+/* HUMIDADE */
+fill(
 "Humidade Máxima",
-stations.filter(s=>s.humMax!=null)
-.sort((a,b)=>b.humMax-a.humMax)
-.map(s=>({local:s.local,value:s.humMax,time:s.time}))
-,"%"
+[...stations].sort((a,b)=>b.hum-a.hum)
+.map(s=>({local:s.local,value:s.hum,time:s.time}))
+,"%","hum"
 );
 
-addRows(
+fill(
 "Humidade Mínima",
-stations.filter(s=>s.humMin!=null)
-.sort((a,b)=>a.humMin-b.humMin)
-.map(s=>({local:s.local,value:s.humMin,time:s.time}))
-,"%"
+[...stations].sort((a,b)=>a.hum-b.hum)
+.map(s=>({local:s.local,value:s.hum,time:s.time}))
+,"%","hum"
 );
 
-addRows(
+/* AMPLITUDE */
+const max=Math.max(...stations.map(s=>s.temp));
+const min=Math.min(...stations.map(s=>s.temp));
+const amp=(max-min).toFixed(1);
+
+fill(
 "Amplitude Térmica",
-stations.filter(s=>s.amp!=null)
-.sort((a,b)=>b.amp-a.amp)
-.map(s=>({local:s.local,value:s.amp,time:s.time}))
-,"°C"
+[{local:"Portugal",value:amp,time:new Date().toLocaleTimeString()}],
+" °C"
 );
 
-document.getElementById("updateTime").innerHTML =
+document.getElementById("update").innerHTML=
 "Última atualização: "+new Date().toLocaleTimeString();
 
 }
 
 createTables();
-loadData();
-
-setInterval(loadData,300000); // 5 minutos
+load();
+setInterval(load,300000);
 
 </script>
 
