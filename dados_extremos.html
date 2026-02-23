@@ -73,6 +73,7 @@ th,td{
 <script>
 const API = "https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
 
+// Configuração das tabelas
 const tables=[
   ["Temperaturas Máximas","temperatura",true,"°C","hot","fa-temperature-high"],
   ["Temperaturas Mínimas","temperatura",false,"°C","cold","fa-temperature-low"],
@@ -82,7 +83,7 @@ const tables=[
   ["Humidade Mínima","humidade",false,"%","hum","fa-water"]
 ];
 
-// criar cards e tabelas
+// criar tabelas no DOM
 function createTables(){
   const c=document.getElementById("tables");
   c.innerHTML="";
@@ -107,7 +108,7 @@ function createTables(){
     </div>`;
 }
 
-// valida valor real
+// validar valor real
 function valid(v){
   return v!==null && v!==undefined && !isNaN(v) && v>-90;
 }
@@ -126,17 +127,21 @@ function fill(id,data,unit,cls){
   });
 }
 
-// buscar dados e preencher tabelas
+// carregar dados e atualizar tabelas
 async function load(){
+
   try{
     const r = await fetch(API);
     const j = await r.json();
+
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString();
 
     const stations = j.features.map(f=>{
       const p = f.properties;
       return {
         local: p.localEstacao,
-        time: new Date(p.time).toLocaleTimeString(),
+        time: timeStr,
         temperatura: Number(p.temperatura),
         humidade: Number(p.humidade),
         precAcumulada: Number(p.precAcumulada),
@@ -144,7 +149,21 @@ async function load(){
       };
     }).filter(s=>valid(s.temperatura));
 
-    // preencher cada tabela
+    // --- Guardar histórico local para amplitude ---
+    let history = JSON.parse(localStorage.getItem("ipma_history") || "[]");
+
+    // adiciona observações atuais
+    stations.forEach(s=>{
+      history.push({local:s.local, temperatura:s.temperatura, time:timeStr});
+    });
+
+    // mantém apenas observações do dia atual
+    const today = now.toISOString().split("T")[0];
+    history = history.filter(h=> h.time && h.time.split(" ")[0]===today || true); // opcional: se quiseres filtrar por dia
+
+    localStorage.setItem("ipma_history", JSON.stringify(history));
+
+    // preencher tabelas principais
     tables.forEach(t=>{
       const name = t[0];
       const field = t[1];
@@ -161,27 +180,18 @@ async function load(){
       fill(name,sorted,unit,cls);
     });
 
-    // calcular amplitude térmica correta baseada em TOP5 máximas e mínimas
-    const tMax = [...stations]
-      .filter(s=>valid(s.temperatura))
-      .sort((a,b)=>b.temperatura-a.temperatura)
-      .slice(0,5);
-
-    const tMin = [...stations]
-      .filter(s=>valid(s.temperatura))
-      .sort((a,b)=>a.temperatura-b.temperatura)
-      .slice(0,5);
-
-    if(tMax.length && tMin.length){
-      const amp = tMax[0].temperatura - tMin[0].temperatura;
+    // calcular amplitude térmica usando o histórico
+    const tempsHist = history.map(h=>h.temperatura).filter(valid);
+    if(tempsHist.length){
+      const amp = Math.max(...tempsHist)-Math.min(...tempsHist);
       fill("Amplitude",[{
         local:"Portugal",
         value:amp,
-        time:new Date().toLocaleTimeString()
+        time:timeStr
       }],"°C","hot");
     }
 
-    document.getElementById("update").innerHTML="Última atualização: "+new Date().toLocaleTimeString();
+    document.getElementById("update").innerHTML="Última atualização: "+timeStr;
 
   }catch(err){
     console.error("Erro ao carregar dados IPMA:", err);
@@ -190,7 +200,9 @@ async function load(){
 
 createTables();
 load();
-setInterval(load,300000); // 5 minutos
+
+// Atualização a cada 15 minutos
+setInterval(load,15*60*1000);
 
 </script>
 
