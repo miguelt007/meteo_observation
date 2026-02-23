@@ -161,10 +161,19 @@ async function load(){
       fill(name,sorted,unit,cls);
     });
 
-    // amplitude térmica nacional
-    const temps = stations.map(s=>s.temperatura).filter(valid);
-    if(temps.length){
-      const amp = Math.max(...temps)-Math.min(...temps);
+    // calcular amplitude térmica correta baseada em TOP5 máximas e mínimas
+    const tMax = [...stations]
+      .filter(s=>valid(s.temperatura))
+      .sort((a,b)=>b.temperatura-a.temperatura)
+      .slice(0,5);
+
+    const tMin = [...stations]
+      .filter(s=>valid(s.temperatura))
+      .sort((a,b)=>a.temperatura-b.temperatura)
+      .slice(0,5);
+
+    if(tMax.length && tMin.length){
+      const amp = tMax[0].temperatura - tMin[0].temperatura;
       fill("Amplitude",[{
         local:"Portugal",
         value:amp,
