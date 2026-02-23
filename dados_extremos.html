@@ -2,18 +2,19 @@
 <html lang="pt">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <title>Extremos Diários IPMA</title>
 
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
 <style>
+
 body{
-margin:0;
-font-family:Segoe UI;
-background:#050816;
+background:#060b1f;
 color:white;
+font-family:Segoe UI;
+margin:0;
 }
 
 h1{
@@ -35,9 +36,9 @@ padding:20px;
 }
 
 .card{
-background:#0c122b;
-border-radius:15px;
-box-shadow:0 0 15px #00eaff33;
+background:#0e1635;
+border-radius:14px;
+box-shadow:0 0 20px #00eaff33;
 padding:15px;
 }
 
@@ -53,9 +54,10 @@ border-bottom:1px solid #ffffff22;
 
 .hot{color:#ff5252;}
 .cold{color:#4fc3f7;}
-.rain{color:#4dd0e1;}
-.wind{color:#ffd54f;}
 .hum{color:#81c784;}
+.wind{color:#ffd54f;}
+.rain{color:#4dd0e1;}
+
 </style>
 </head>
 
@@ -68,10 +70,9 @@ border-bottom:1px solid #ffffff22;
 
 <script>
 
-const API =
-"https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
+const API="https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson";
 
-const sections=[
+const tables=[
 ["Temperaturas Máximas","fa-temperature-high"],
 ["Temperaturas Mínimas","fa-temperature-low"],
 ["Chuva Acumulada","fa-cloud-rain"],
@@ -85,13 +86,13 @@ function createTables(){
 const c=document.getElementById("tables");
 c.innerHTML="";
 
-sections.forEach(s=>{
+tables.forEach(t=>{
 c.innerHTML+=`
 <div class="card">
-<h2><i class="fa ${s[1]}"></i> ${s[0]}</h2>
+<h2><i class="fa ${t[1]}"></i> ${t[0]}</h2>
 <table>
 <tr><th>Local</th><th>Valor</th><th>Hora</th></tr>
-<tbody id="${s[0]}"></tbody>
+<tbody id="${t[0]}"></tbody>
 </table>
 </div>`;
 });
@@ -116,79 +117,77 @@ async function load(){
 const r=await fetch(API);
 const j=await r.json();
 
-const stations=j.features
-.map(f=>{
+const stations=j.features.map(f=>{
 
 const p=f.properties;
 
-if(!p.temperature) return null;
+if(
+p.airTemperature==null ||
+p.airTemperature==-99
+) return null;
 
 return{
-local:p.local,
-temp:p.temperature,
-hum:p.humidity,
-rain:p.precipitation ?? 0,
-wind:p.windGust ?? 0,
+local:p.stationName,
+temp:Number(p.airTemperature),
+hum:Number(p.relativeHumidity),
+rain:Number(p.precipitationIntensity)||0,
+wind:Number(p.windGust)||0,
 time:p.obsTime?.split(" ")[1] ?? "-"
 };
 
-})
-.filter(Boolean);
+}).filter(Boolean);
 
-/* TEMPERATURAS */
+/* Temperaturas */
 fill(
 "Temperaturas Máximas",
-[...stations].sort((a,b)=>b.temp-a.temp)
-.map(s=>({local:s.local,value:s.temp,time:s.time}))
-,"°C","hot"
+[...stations].sort((a,b)=>b.temp-a.temp),
+" °C","hot"
 );
 
 fill(
 "Temperaturas Mínimas",
-[...stations].sort((a,b)=>a.temp-b.temp)
-.map(s=>({local:s.local,value:s.temp,time:s.time}))
-,"°C","cold"
+[...stations].sort((a,b)=>a.temp-b.temp),
+" °C","cold"
 );
 
-/* CHUVA */
+/* Chuva */
 fill(
 "Chuva Acumulada",
-[...stations].sort((a,b)=>b.rain-a.rain)
-.map(s=>({local:s.local,value:s.rain,time:s.time}))
-," mm","rain"
+[...stations].sort((a,b)=>b.rain-a.rain),
+" mm","rain"
 );
 
-/* VENTO */
+/* Vento */
 fill(
 "Rajadas Vento",
-[...stations].sort((a,b)=>b.wind-a.wind)
-.map(s=>({local:s.local,value:s.wind,time:s.time}))
-," km/h","wind"
+[...stations].sort((a,b)=>b.wind-a.wind),
+" km/h","wind"
 );
 
-/* HUMIDADE */
+/* Humidade */
 fill(
 "Humidade Máxima",
-[...stations].sort((a,b)=>b.hum-a.hum)
-.map(s=>({local:s.local,value:s.hum,time:s.time}))
-,"%","hum"
+[...stations].sort((a,b)=>b.hum-a.hum),
+"%","hum"
 );
 
 fill(
 "Humidade Mínima",
-[...stations].sort((a,b)=>a.hum-b.hum)
-.map(s=>({local:s.local,value:s.hum,time:s.time}))
-,"%","hum"
+[...stations].sort((a,b)=>a.hum-b.hum),
+"%","hum"
 );
 
-/* AMPLITUDE */
+/* Amplitude nacional */
 const max=Math.max(...stations.map(s=>s.temp));
 const min=Math.min(...stations.map(s=>s.temp));
-const amp=(max-min).toFixed(1);
 
 fill(
 "Amplitude Térmica",
-[{local:"Portugal",value:amp,time:new Date().toLocaleTimeString()}],
+[{
+local:"Portugal",
+value:(max-min).toFixed(1),
+time:new Date().toLocaleTimeString()
+}],
 " °C"
 );
 
