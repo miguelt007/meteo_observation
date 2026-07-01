@@ -4,32 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IPMA - Temperaturas Atuais</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        /* Ajuste do tamanho do mapa */
         #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
-        /* Customização dos rótulos/labels de temperatura no mapa */
+        
+        /* Estilização base do balão de temperatura */
         .temp-badge {
-            background: #ef4444;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 6px;
+            padding: 3px 6px;
+            border-radius: 5px;
             font-weight: bold;
             font-size: 11px;
-            border: 1px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.25);
             white-space: nowrap;
+            text-align: center;
         }
-        .dark .temp-badge {
-            background: #3b82f6;
-            border-color: #1e293b;
-        }
+        
+        /* Ajuste para garantir que a legenda flutue corretamente sobre o Leaflet */
+        .leaflet-bottom { z-index: 500 !important; }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
 
+    <!-- Barra de Navegação -->
     <header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-slate-900 shadow-sm z-10 relative">
         <div class="flex items-center gap-2">
             <span class="text-xl">🌦️</span>
@@ -42,31 +44,52 @@
         </button>
     </header>
 
+    <!-- Mapa -->
     <main class="relative">
         <div id="map"></div>
     </main>
 
     <script>
-        // --- GESTÃO DE TEMA (CLARO / ESCURO) ---
+        // --- MAPEAMENTO DE CORES (De acordo com 1000116277.jpg) ---
+        const scale = [
+            { min: 40,  max: Infinity, bg: '#af38a4', fg: '#ffffff', label: '≥ 40' },
+            { min: 35,  max: 40,       bg: '#7a001e', fg: '#ffffff', label: '35, 40' },
+            { min: 30,  max: 35,       bg: '#d82d1b', fg: '#ffffff', label: '30, 35' },
+            { min: 25,  max: 30,       bg: '#f16d38', fg: '#ffffff', label: '25, 30' },
+            { min: 20,  max: 25,       bg: '#fba353', fg: '#1e293b', label: '20, 25' },
+            { min: 15,  max: 20,       bg: '#fede8a', fg: '#1e293b', label: '15, 20' },
+            { min: 10,  max: 15,       bg: '#e2f1f8', fg: '#1e293b', label: '10, 15' },
+            { min: 5,   max: 10,       bg: '#a3d7e8', fg: '#1e293b', label: '5, 10' },
+            { min: 0,   max: 5,        bg: '#8593c4', fg: '#ffffff', label: '0, 5' },
+            { min: -5,  max: 0,        bg: '#8c60b3', fg: '#ffffff', label: '-5, 0' },
+            { min: -Infinity, max: -5, bg: '#813a96', fg: '#ffffff', label: '< -5' }
+        ];
+
+        function getTempStyle(t) {
+            if (t === null || t === undefined || t === -99) {
+                return { bg: '#94a3b8', fg: '#ffffff' }; // Cor cinza para dados indisponíveis
+            }
+            return scale.find(item => t >= item.min && t < item.max) || { bg: '#94a3b8', fg: '#ffffff' };
+        }
+
+        // --- GESTÃO DE TEMA ---
         const html = document.documentElement;
         const themeToggle = document.getElementById('theme-toggle');
         const themeIcon = document.getElementById('theme-icon');
         const themeText = document.getElementById('theme-text');
 
-        // Configuração dos tiles do mapa de acordo com o tema
         const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
         });
 
         const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+            attribution: '&copy; OpenStreetMap &copy; CARTO'
         });
 
-        // Inicialização do Mapa (Focado em Portugal Continental por padrão)
         const map = L.map('map', {
             center: [39.5, -8.3],
             zoom: 7,
-            layers: [darkTiles] // Começa no modo noturno/dark
+            layers: [darkTiles]
         });
 
         function updateThemeUI() {
@@ -88,11 +111,35 @@
             updateThemeUI();
         });
 
-        // Executa uma vez no início para ajustar o estado visual correto do botão
         updateThemeUI();
 
+        // --- ADICIONAR A LEGENDA AO MAPA ---
+        const legend = L.control({ position: 'bottomright' });
+        legend.onAdd = function () {
+            const div = L.DomUtil.create('div', 'bg-white dark:bg-slate-900 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 font-sans text-xs w-36');
+            
+            let legendHtml = `
+                <div class="font-bold mb-1 border-b border-slate-200 dark:border-slate-700 pb-1 text-sm">Legenda</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mb-2">Temp. do ar [°C]</div>
+                <div class="flex flex-col gap-0.5">
+            `;
 
-        // --- OBTENÇÃO E TRATAMENTO DE DADOS (IPMA) ---
+            scale.forEach(item => {
+                legendHtml += `
+                    <div class="flex items-center gap-2">
+                        <span class="w-5 h-4 rounded-sm border border-black/10 inline-block" style="background-color: ${item.bg}"></span>
+                        <span class="font-medium">${item.label}</span>
+                    </div>
+                `;
+            });
+
+            legendHtml += '</div>';
+            div.innerHTML = legendHtml;
+            return div;
+        };
+        legend.addTo(map);
+
+        // --- OBTENÇÃO DOS DADOS DO IPMA ---
         const apiUrl = 'https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson';
 
         async function fetchWeatherData() {
@@ -101,27 +148,28 @@
                 if (!response.ok) throw new Error('Erro ao obter dados do IPMA');
                 const geojsonData = await response.json();
 
-                // Processamento de dados: a API envia várias horas. Vamos agrupar por estação e manter apenas o registo mais recente.
                 const latestStations = {};
-
                 geojsonData.features.forEach(feature => {
                     const props = feature.properties;
                     const id = props.idEstacao;
                     const time = new Date(props.time);
 
-                    // Se a estação ainda não foi adicionada ou este registo for mais recente, atualiza
                     if (!latestStations[id] || time > new Date(latestStations[id].properties.time)) {
                         latestStations[id] = feature;
                     }
                 });
 
-                // Renderizar os marcadores processados no mapa
                 Object.values(latestStations).forEach(station => {
-                    const coords = station.geometry.coordinates; // [longitude, latitude]
+                    const coords = station.geometry.coordinates;
                     const props = station.properties;
 
-                    // Formatação das variáveis (tratando nulos potenciais)
-                    const temp = props.temperatura !== -99 ? `${props.temperatura} °C` : 'N/D';
+                    const hasTemp = props.temperatura !== -99;
+                    const tempVal = props.temperatura;
+                    const tempStr = hasTemp ? `${tempVal} °C` : 'N/D';
+                    
+                    // Obter estilo dinâmico com base na imagem 1000116277.jpg
+                    const style = getTempStyle(hasTemp ? tempVal : null);
+
                     const humidade = props.humidade !== -99 ? `${props.humidade} %` : 'N/D';
                     const ventoDir = props.idDireccVento !== -99 ? props.idDireccVento : 'N/D';
                     const ventoVel = props.intensidadeVento !== -99 ? `${props.intensidadeVento} km/h` : 'N/D';
@@ -129,15 +177,14 @@
                     const precipitacao = props.precipitacaoAcumulada !== -99 ? `${props.precipitacaoAcumulada} mm` : 'N/D';
                     const dataHora = new Date(props.time).toLocaleString('pt-PT');
 
-                    // Ícone customizado que mostra a temperatura diretamente sobre o mapa
+                    // DivIcon usando as cores calculadas
                     const customIcon = L.divIcon({
                         className: 'custom-div-icon',
-                        html: `<div class="temp-badge">${temp}</div>`,
-                        iconSize: [40, 20],
-                        iconAnchor: [20, 10]
+                        html: `<div class="temp-badge" style="background-color: ${style.bg}; color: ${style.fg};">${tempStr}</div>`,
+                        iconSize: [45, 22],
+                        iconAnchor: [22, 11]
                     });
 
-                    // Construção do design moderno e adaptável para o Popup (Tailwind)
                     const popupContent = `
                         <div class="p-1 font-sans text-slate-800 dark:text-slate-100 min-w-[220px]">
                             <div class="border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
@@ -147,7 +194,7 @@
                             <div class="grid grid-cols-2 gap-2 text-xs">
                                 <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
                                     <span class="text-slate-400 text-[10px] uppercase font-semibold">Temperatura</span>
-                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">${temp}</span>
+                                    <span class="text-sm font-bold" style="color: ${html.classList.contains('dark') ? '#93c5fd' : '#2563eb'}">${tempStr}</span>
                                 </div>
                                 <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
                                     <span class="text-slate-400 text-[10px] uppercase font-semibold">Humidade</span>
@@ -168,13 +215,9 @@
                         </div>
                     `;
 
-                    // Adicionar o marcador (Leaflet usa [Latitude, Longitude])
                     L.marker([coords[1], coords[0]], { icon: customIcon })
                         .addTo(map)
-                        .bindPopup(popupContent, {
-                            maxWidth: 300,
-                            className: 'modern-popup'
-                        });
+                        .bindPopup(popupContent, { maxWidth: 300 });
                 });
 
             } catch (error) {
@@ -182,7 +225,6 @@
             }
         }
 
-        // Executar a função ao carregar a página
         fetchWeatherData();
     </script>
 </body>
