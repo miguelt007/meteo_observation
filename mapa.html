@@ -65,6 +65,22 @@
             return scale.find(item => t >= item.min && t < item.max) || { bg: '#94a3b8', fg: '#ffffff' };
         }
 
+        // --- CONVERSÃO DA DIREÇÃO DO VENTO ---
+        function getWindDirection(code) {
+            const directions = {
+                1: 'Norte',
+                2: 'Nordeste',
+                3: 'Este',
+                4: 'Sudeste',
+                5: 'Sul',
+                6: 'Sudoeste',
+                7: 'Oeste',
+                8: 'Noroeste',
+                9: 'Calmo'
+            };
+            return directions[code] || 'N/D';
+        }
+
         // --- GESTÃO DE TEMA ---
         const html = document.documentElement;
         const themeToggle = document.getElementById('theme-toggle');
@@ -85,7 +101,6 @@
             layers: [darkTiles]
         });
 
-        // Grupo para guardar os marcadores e podermos limpá-los na atualização automática
         const markersGroup = L.layerGroup().addTo(map);
 
         function updateThemeUI() {
@@ -144,7 +159,6 @@
                 if (!response.ok) throw new Error('Erro ao obter dados do IPMA');
                 const geojsonData = await response.json();
 
-                // Limpa os marcadores antigos antes de desenhar os novos da atualização
                 markersGroup.clearLayers();
 
                 const latestStations = {};
@@ -169,8 +183,11 @@
                     const style = getTempStyle(hasTemp ? tempVal : null);
 
                     const humidade = props.humidade !== -99 ? `${props.humidade} %` : 'N/D';
-                    const ventoDir = props.idDireccVento !== -99 ? props.idDireccVento : 'N/D';
+                    
+                    // TRATAMENTO DO VENTO COM TEXTO POR EXTENSO
                     const ventoVel = props.intensidadeVento !== -99 ? `${props.intensidadeVento} km/h` : 'N/D';
+                    const ventoDirTexto = props.idDireccVento !== -99 ? getWindDirection(props.idDireccVento) : 'N/D';
+                    
                     const pressao = props.pressao !== -99 ? `${props.pressao} hPa` : 'N/D';
                     const precipitacao = (props.precipitacao !== undefined && props.precipitacao !== -99) ? `${props.precipitacao} mm` : '0.0 mm';
                     
@@ -204,7 +221,7 @@
                                     </div>
                                     <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
                                         <span class="text-slate-400 text-[10px] uppercase font-semibold">Vento</span>
-                                        <span class="text-center font-semibold text-[11px] text-slate-800 dark:text-slate-100">${ventoVel} (${ventoDir})</span>
+                                        <span class="text-center font-semibold text-[11px] text-slate-800 dark:text-slate-100">${ventoVel}<br><span class="text-[10px] text-slate-500 dark:text-slate-400 font-normal">(${ventoDirTexto})</span></span>
                                     </div>
                                     <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
                                         <span class="text-slate-400 text-[10px] uppercase font-semibold">Pressão</span>
@@ -222,17 +239,14 @@
                     marker.bindPopup(getPopupContent, { maxWidth: 300 });
                 });
 
-                console.log(`Dados do IPMA atualizados com sucesso às ${new Date().toLocaleTimeString('pt-PT')}`);
+                console.log(`Dados atualizados com sucesso às ${new Date().toLocaleTimeString('pt-PT')}`);
 
             } catch (error) {
                 console.error('Erro ao processar dados:', error);
             }
         }
 
-        // Primeira chamada ao carregar a página
         fetchWeatherData();
-
-        // ATUALIZAÇÃO AUTOMÁTICA: Faz uma nova chamada à API a cada 60 minutos (3600000 milissegundos)
         setInterval(fetchWeatherData, 3600000);
     </script>
 </body>
