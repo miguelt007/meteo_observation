@@ -227,7 +227,17 @@
                     const pressao = props.pressao !== -99 ? `${props.pressao} hPa` : 'N/D';
                     const precipitacao = (props.precipitacao !== undefined && props.precipitacao !== -99) ? `${props.precipitacao} mm` : '0.0 mm';
                     
-                    const dataHora = new Date(props.time).toLocaleString('pt-PT');
+                    // Tratamento e formatação robusta da data e hora em fuso português (UTC para Europe/Lisbon)
+                    const dataUTC = props.time.endsWith('Z') ? props.time : props.time + 'Z';
+                    const dataHora = new Date(dataUTC).toLocaleString('pt-PT', {
+                        timeZone: 'Europe/Lisbon',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                    });
 
                     if (hasTemp && tempVal > maxTemp.val) { maxTemp = { val: tempVal, loc: props.localEstacao }; }
                     if (props.humidade !== -99 && props.humidade > maxHum.val) { maxHum = { val: props.humidade, loc: props.localEstacao }; }
@@ -291,7 +301,6 @@
                 document.getElementById('card-press-val').textContent = maxPress.val !== -Infinity ? `${maxPress.val} hPa` : 'N/D';
                 document.getElementById('card-press-loc').textContent = maxPress.loc;
 
-                // Força o mapa e os seus controlos a recalcularem-se no espaço flexível real
                 setTimeout(() => { map.invalidateSize(); }, 200);
 
             } catch (error) {
@@ -302,7 +311,6 @@
         fetchWeatherData();
         setInterval(fetchWeatherData, 3600000);
         
-        // Corrige o tamanho do mapa também se o utilizador redimensionar a janela do browser manualmente
         window.addEventListener('resize', () => { map.invalidateSize(); });
     </script>
 </body>
