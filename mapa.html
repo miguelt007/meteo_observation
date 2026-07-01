@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPMA - Temperaturas Atuais</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* Ajuste do tamanho do mapa */
+        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
+        /* Customização dos rótulos/labels de temperatura no mapa */
+        .temp-badge {
+            background: #ef4444;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 11px;
+            border: 1px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+        .dark .temp-badge {
+            background: #3b82f6;
+            border-color: #1e293b;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
+
+    <header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-slate-900 shadow-sm z-10 relative">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">🌦️</span>
+            <h1 class="text-lg font-bold tracking-tight md:text-xl">IPMA Monitor</h1>
+        </div>
+        
+        <button id="theme-toggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm font-medium flex items-center gap-2 cursor-pointer">
+            <span id="theme-icon">🌙</span>
+            <span class="hidden sm:inline" id="theme-text">Modo Noturno</span>
+        </button>
+    </header>
+
+    <main class="relative">
+        <div id="map"></div>
+    </main>
+
+    <script>
+        // --- GESTÃO DE TEMA (CLARO / ESCURO) ---
+        const html = document.documentElement;
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+
+        // Configuração dos tiles do mapa de acordo com o tema
+        const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        });
+
+        const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+        });
+
+        // Inicialização do Mapa (Focado em Portugal Continental por padrão)
+        const map = L.map('map', {
+            center: [39.5, -8.3],
+            zoom: 7,
+            layers: [darkTiles] // Começa no modo noturno/dark
+        });
+
+        function updateThemeUI() {
+            if (html.classList.contains('dark')) {
+                themeIcon.textContent = '☀️';
+                themeText.textContent = 'Modo Diurno';
+                map.removeLayer(lightTiles);
+                darkTiles.addTo(map);
+            } else {
+                themeIcon.textContent = '🌙';
+                themeText.textContent = 'Modo Noturno';
+                map.removeLayer(darkTiles);
+                lightTiles.addTo(map);
+            }
+        }
+
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            updateThemeUI();
+        });
+
+        // Executa uma vez no início para ajustar o estado visual correto do botão
+        updateThemeUI();
+
+
+        // --- OBTENÇÃO E TRATAMENTO DE DADOS (IPMA) ---
+        const apiUrl = 'https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson';
+
+        async function fetchWeatherData() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('Erro ao obter dados do IPMA');
+                const geojsonData = await response.json();
+
+                // Processamento de dados: a API envia várias horas. Vamos agrupar por estação e manter apenas o registo mais recente.
+                const latestStations = {};
+
+                geojsonData.features.forEach(feature => {
+                    const props = feature.properties;
+                    const id = props.idEstacao;
+                    const time = new Date(props.time);
+
+                    // Se a estação ainda não foi adicionada ou este registo for mais recente, atualiza
+                    if (!latestStations[id] || time > new Date(latestStations[id].properties.time)) {
+                        latestStations[id] = feature;
+                    }
+                });
+
+                // Renderizar os marcadores processados no mapa
+                Object.values(latestStations).forEach(station => {
+                    const coords = station.geometry.coordinates; // [longitude, latitude]
+                    const props = station.properties;
+
+                    // Formatação das variáveis (tratando nulos potenciais)
+                    const temp = props.temperatura !== -99 ? `${props.temperatura} °C` : 'N/D';
+                    const humidade = props.humidade !== -99 ? `${props.humidade} %` : 'N/D';
+                    const ventoDir = props.idDireccVento !== -99 ? props.idDireccVento : 'N/D';
+                    const ventoVel = props.intensidadeVento !== -99 ? `${props.intensidadeVento} km/h` : 'N/D';
+                    const pressao = props.pressao !== -99 ? `${props.pressao} hPa` : 'N/D';
+                    const precipitacao = props.precipitacaoAcumulada !== -99 ? `${props.precipitacaoAcumulada} mm` : 'N/D';
+                    const dataHora = new Date(props.time).toLocaleString('pt-PT');
+
+                    // Ícone customizado que mostra a temperatura diretamente sobre o mapa
+                    const customIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: `<div class="temp-badge">${temp}</div>`,
+                        iconSize: [40, 20],
+                        iconAnchor: [20, 10]
+                    });
+
+                    // Construção do design moderno e adaptável para o Popup (Tailwind)
+                    const popupContent = `
+                        <div class="p-1 font-sans text-slate-800 dark:text-slate-100 min-w-[220px]">
+                            <div class="border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
+                                <h3 class="text-sm font-bold text-blue-600 dark:text-blue-400">${props.localEstacao}</h3>
+                                <p class="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Última leitura: ${dataHora}</p>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-xs">
+                                <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
+                                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Temperatura</span>
+                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">${temp}</span>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
+                                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Humidade</span>
+                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">${humidade}</span>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
+                                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Vento</span>
+                                    <span class="text-center font-semibold text-[11px] text-slate-800 dark:text-slate-100">${ventoVel} (${ventoDir})</span>
+                                </div>
+                                <div class="bg-slate-50 dark:bg-slate-800 p-2 rounded flex flex-col items-center justify-center">
+                                    <span class="text-slate-400 text-[10px] uppercase font-semibold">Pressão</span>
+                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">${pressao}</span>
+                                </div>
+                            </div>
+                            <div class="mt-2 text-[11px] text-center text-slate-500 dark:text-slate-400 bg-blue-50 dark:bg-slate-800/50 py-1 rounded">
+                                Precipitação Acumulada: <span class="font-bold text-blue-600 dark:text-blue-400">${precipitacao}</span>
+                            </div>
+                        </div>
+                    `;
+
+                    // Adicionar o marcador (Leaflet usa [Latitude, Longitude])
+                    L.marker([coords[1], coords[0]], { icon: customIcon })
+                        .addTo(map)
+                        .bindPopup(popupContent, {
+                            maxWidth: 300,
+                            className: 'modern-popup'
+                        });
+                });
+
+            } catch (error) {
+                console.error('Erro ao processar dados:', error);
+            }
+        }
+
+        // Executar a função ao carregar a página
+        fetchWeatherData();
+    </script>
+</body>
+</html>
