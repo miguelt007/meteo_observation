@@ -85,6 +85,9 @@
             layers: [darkTiles]
         });
 
+        // Grupo para guardar os marcadores e podermos limpá-los na atualização automática
+        const markersGroup = L.layerGroup().addTo(map);
+
         function updateThemeUI() {
             if (html.classList.contains('dark')) {
                 themeIcon.textContent = '☀️';
@@ -141,6 +144,9 @@
                 if (!response.ok) throw new Error('Erro ao obter dados do IPMA');
                 const geojsonData = await response.json();
 
+                // Limpa os marcadores antigos antes de desenhar os novos da atualização
+                markersGroup.clearLayers();
+
                 const latestStations = {};
                 geojsonData.features.forEach(feature => {
                     const props = feature.properties;
@@ -166,8 +172,6 @@
                     const ventoDir = props.idDireccVento !== -99 ? props.idDireccVento : 'N/D';
                     const ventoVel = props.intensidadeVento !== -99 ? `${props.intensidadeVento} km/h` : 'N/D';
                     const pressao = props.pressao !== -99 ? `${props.pressao} hPa` : 'N/D';
-                    
-                    // CORREÇÃO: A propriedade correta da API é 'precipitacao'
                     const precipitacao = (props.precipitacao !== undefined && props.precipitacao !== -99) ? `${props.precipitacao} mm` : '0.0 mm';
                     
                     const dataHora = new Date(props.time).toLocaleString('pt-PT');
@@ -179,7 +183,6 @@
                         iconAnchor: [22, 11]
                     });
 
-                    // Função para gerar o popup dinamicamente com base no tema ativo no momento do clique
                     const getPopupContent = () => {
                         const isDark = html.classList.contains('dark');
                         const textTempColor = isDark ? '#93c5fd' : '#2563eb';
@@ -208,25 +211,29 @@
                                         <span class="text-sm font-bold text-slate-800 dark:text-slate-100">${pressao}</span>
                                     </div>
                                 </div>
-                                <div class="mt-2 text-[11px] text-center text-slate-500 dark:text-slate-400 bg-blue-50 dark:bg-slate-800/50 py-1 rounded">
+                                <div class="mt-2 text-[11px] text-center bg-blue-50 dark:bg-slate-950 text-slate-700 dark:text-slate-200 py-1.5 px-2 rounded border border-blue-100/50 dark:border-slate-800">
                                     Precipitação Acumulada: <span class="font-bold text-blue-600 dark:text-blue-400">${precipitacao}</span>
                                 </div>
                             </div>
                         `;
                     };
 
-                    const marker = L.marker([coords[1], coords[0]], { icon: customIcon }).addTo(map);
-                    
-                    // Vincula a geração dinâmica ao abrir o popup
+                    const marker = L.marker([coords[1], coords[0]], { icon: customIcon }).addTo(markersGroup);
                     marker.bindPopup(getPopupContent, { maxWidth: 300 });
                 });
+
+                console.log(`Dados do IPMA atualizados com sucesso às ${new Date().toLocaleTimeString('pt-PT')}`);
 
             } catch (error) {
                 console.error('Erro ao processar dados:', error);
             }
         }
 
+        // Primeira chamada ao carregar a página
         fetchWeatherData();
+
+        // ATUALIZAÇÃO AUTOMÁTICA: Faz uma nova chamada à API a cada 60 minutos (3600000 milissegundos)
+        setInterval(fetchWeatherData, 3600000);
     </script>
 </body>
 </html>
