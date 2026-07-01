@@ -13,13 +13,11 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        /* O mapa ocupa o espaço restante vertical descontando a navbar e os cards */
-        #map { height: calc(100vh - 64px - 116px); width: 100%; z-index: 1; }
-        
-        /* Em telemóveis, os cards ocupam mais espaço vertical, ajustamos o mapa dinamicamente */
-        @media (max-width: 768px) {
-            #map { height: calc(100vh - 64px - 340px); }
-        }
+        /* Garante que a página não ganhe barras de rolagem globais */
+        html, body { height: 100%; margin: 0; overflow: hidden; }
+
+        /* O mapa agora ocupa o espaço restante exato de forma flexível */
+        #map { width: 100%; height: 100%; z-index: 1; }
 
         .temp-badge {
             padding: 3px 6px;
@@ -39,12 +37,12 @@
         .dark .custom-legend-scroll::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 min-h-screen flex flex-col">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 h-screen flex flex-col">
 
     <header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-slate-900 shadow-sm z-10 shrink-0 transition-colors duration-300">
         <div class="flex items-center gap-2">
             <span class="text-xl">🌦️</span>
-            <h1 class="text-lg font-bold tracking-tight md:text-xl">IPMA Monitorização de temperaturas</h1>
+            <h1 class="text-lg font-bold tracking-tight md:text-xl">IPMA Monitor</h1>
         </div>
         
         <button id="theme-toggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm font-medium flex items-center gap-2 cursor-pointer">
@@ -95,7 +93,7 @@
         </div>
     </section>
 
-    <main class="flex-1 relative">
+    <main class="flex-1 relative overflow-hidden">
         <div id="map"></div>
     </main>
 
@@ -293,6 +291,9 @@
 
                 document.getElementById('card-press-val').textContent = maxPress.val !== -Infinity ? `${maxPress.val} hPa` : 'N/D';
                 document.getElementById('card-press-loc').textContent = maxPress.loc;
+
+                // Força o mapa a recalcular o tamanho e reposicionar a legenda no sítio certo
+                setTimeout(() => { map.invalidateSize(); }, 200);
 
             } catch (error) {
                 console.error('Erro ao processar dados:', error);
