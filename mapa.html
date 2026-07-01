@@ -8,8 +8,14 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        #map { height: calc(100vh - 64px); width: 100%; z-index: 1; }
+        /* O mapa agora ocupa o espaço restante vertical descontando a navbar e os cards */
+        #map { height: calc(100vh - 64px - 116px); width: 100%; z-index: 1; }
         
+        /* Em telemóveis, os cards ocupam mais espaço vertical, ajustamos o mapa dinamicamente */
+        @media (max-width: 768px) {
+            #map { height: calc(100vh - 64px - 340px); }
+        }
+
         .temp-badge {
             padding: 3px 6px;
             border-radius: 5px;
@@ -23,25 +29,17 @@
         
         .leaflet-bottom { z-index: 500 !important; }
 
-        /* Esconde a barra de scroll horizontal e customiza a vertical na legenda para ficar estético */
-        .custom-legend-scroll::-webkit-scrollbar {
-            width: 4px;
-        }
-        .custom-legend-scroll::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .dark .custom-legend-scroll::-webkit-scrollbar-thumb {
-            background: #475569;
-        }
+        .custom-legend-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-legend-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .dark .custom-legend-scroll::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 min-h-screen flex flex-col">
 
-    <header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-slate-900 shadow-sm z-10 relative">
+    <header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-slate-900 shadow-sm z-10 shrink-0">
         <div class="flex items-center gap-2">
             <span class="text-xl">🌦️</span>
-            <h1 class="text-lg font-bold tracking-tight md:text-xl">IPMA Monitor</h1>
+            <h1 class="text-lg font-bold tracking-tight md:text-xl">IPMA Monitorização de temperaturas</h1>
         </div>
         
         <button id="theme-toggle" class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all text-sm font-medium flex items-center gap-2 cursor-pointer">
@@ -50,7 +48,49 @@
         </button>
     </header>
 
-    <main class="relative">
+    <section class="p-4 bg-slate-100/50 dark:bg-slate-950/40 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4">
+                <div class="p-3 bg-red-50 dark:bg-red-950/50 text-red-500 rounded-lg text-xl">🔥</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Maior Temperatura</p>
+                    <h4 id="card-temp-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
+                    <p id="card-temp-loc" class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">A carregar...</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4">
+                <div class="p-3 bg-blue-50 dark:bg-blue-950/50 text-blue-500 rounded-lg text-xl">💧</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Maior Humidade</p>
+                    <h4 id="card-hum-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
+                    <p id="card-hum-loc" class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">A carregar...</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4">
+                <div class="p-3 bg-amber-50 dark:bg-amber-950/50 text-amber-500 rounded-lg text-xl">💨</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Vento Mais Forte</p>
+                    <h4 id="card-wind-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
+                    <p id="card-wind-loc" class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">A carregar...</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4">
+                <div class="p-3 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-500 rounded-lg text-xl">🌐</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Maior Pressão</p>
+                    <h4 id="card-press-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
+                    <p id="card-press-loc" class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">A carregar...</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <main class="flex-1 relative">
         <div id="map"></div>
     </main>
 
@@ -71,13 +111,10 @@
         ];
 
         function getTempStyle(t) {
-            if (t === null || t === undefined || t === -99) {
-                return { bg: '#94a3b8', fg: '#ffffff' };
-            }
+            if (t === null || t === undefined || t === -99) return { bg: '#94a3b8', fg: '#ffffff' };
             return scale.find(item => t >= item.min && t < item.max) || { bg: '#94a3b8', fg: '#ffffff' };
         }
 
-        // --- CONVERSÃO DA DIREÇÃO DO VENTO ---
         function getWindDirection(code) {
             const directions = {
                 1: 'Norte', 2: 'Nordeste', 3: 'Este', 4: 'Sudeste',
@@ -92,55 +129,33 @@
         const themeIcon = document.getElementById('theme-icon');
         const themeText = document.getElementById('theme-text');
 
-        const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO'
-        });
+        const lightTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' });
+        const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; OpenStreetMap &copy; CARTO' });
 
-        const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; OpenStreetMap &copy; CARTO'
-        });
-
-        const map = L.map('map', {
-            center: [39.5, -8.3],
-            zoom: 7,
-            layers: [darkTiles]
-        });
-
+        const map = L.map('map', { center: [39.5, -8.3], zoom: 7, layers: [darkTiles] });
         const markersGroup = L.layerGroup().addTo(map);
 
         function updateThemeUI() {
             if (html.classList.contains('dark')) {
-                themeIcon.textContent = '☀️';
-                themeText.textContent = 'Modo Diurno';
-                map.removeLayer(lightTiles);
-                darkTiles.addTo(map);
+                themeIcon.textContent = '☀️'; themeText.textContent = 'Modo Diurno';
+                map.removeLayer(lightTiles); darkTiles.addTo(map);
             } else {
-                themeIcon.textContent = '🌙';
-                themeText.textContent = 'Modo Noturno';
-                map.removeLayer(darkTiles);
-                lightTiles.addTo(map);
+                themeIcon.textContent = '🌙'; themeText.textContent = 'Modo Noturno';
+                map.removeLayer(darkTiles); lightTiles.addTo(map);
             }
         }
-
-        themeToggle.addEventListener('click', () => {
-            html.classList.toggle('dark');
-            updateThemeUI();
-        });
-
+        themeToggle.addEventListener('click', () => { html.classList.toggle('dark'); updateThemeUI(); });
         updateThemeUI();
 
-        // --- LEGENDA COM SCROLL ADAPTÁVEL ---
+        // --- LEGENDA ---
         const legend = L.control({ position: 'bottomright' });
         legend.onAdd = function () {
-            // Criada a classe custom-legend-scroll e max-h de modo a caber sempre no ecrã mobile e PC
-            const div = L.DomUtil.create('div', 'bg-white dark:bg-slate-900 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 font-sans text-xs w-36 max-h-[180px] md:max-h-[260px] flex flex-col');
-            
+            const div = L.DomUtil.create('div', 'bg-white dark:bg-slate-900 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 font-sans text-xs w-36 max-h-[160px] md:max-h-[200px] flex flex-col');
             let legendHtml = `
                 <div class="font-bold border-b border-slate-200 dark:border-slate-700 pb-1 text-sm shrink-0">Legenda</div>
                 <div class="text-[10px] text-slate-500 dark:text-slate-400 my-1 shrink-0">Temp. do ar [°C]</div>
                 <div class="flex flex-col gap-1 overflow-y-auto pr-1 custom-legend-scroll">
             `;
-
             scale.forEach(item => {
                 legendHtml += `
                     <div class="flex items-center gap-2 shrink-0">
@@ -149,19 +164,15 @@
                     </div>
                 `;
             });
-
             legendHtml += '</div>';
             div.innerHTML = legendHtml;
-            
-            // Impede que o scroll na legenda faça zoom ou mova o mapa de fundo
             L.DomEvent.disableScrollPropagation(div);
             L.DomEvent.disableClickPropagation(div);
-            
             return div;
         };
         legend.addTo(map);
 
-        // --- OBTENÇÃO DOS DADOS DO IPMA ---
+        // --- OBTENÇÃO E PROCESSAMENTO DOS DADOS ---
         const apiUrl = 'https://api.ipma.pt/open-data/observation/meteorology/stations/obs-surface.geojson';
 
         async function fetchWeatherData() {
@@ -177,13 +188,20 @@
                     const props = feature.properties;
                     const id = props.idEstacao;
                     const time = new Date(props.time);
-
                     if (!latestStations[id] || time > new Date(latestStations[id].properties.time)) {
                         latestStations[id] = feature;
                     }
                 });
 
-                Object.values(latestStations).forEach(station => {
+                const stationsArray = Object.values(latestStations);
+
+                // Variáveis para calcular os valores máximos dos Cards
+                let maxTemp = { val: -Infinity, loc: 'N/D' };
+                let maxHum  = { val: -Infinity, loc: 'N/D' };
+                let maxWind = { val: -Infinity, loc: 'N/D' };
+                let maxPress = { val: -Infinity, loc: 'N/D' };
+
+                stationsArray.forEach(station => {
                     const coords = station.geometry.coordinates;
                     const props = station.properties;
 
@@ -196,12 +214,18 @@
                     const humidade = props.humidade !== -99 ? `${props.humidade} %` : 'N/D';
                     const ventoVel = props.intensidadeVento !== -99 ? `${props.intensidadeVento} km/h` : 'N/D';
                     const ventoDirTexto = props.idDireccVento !== -99 ? getWindDirection(props.idDireccVento) : 'N/D';
-                    
                     const pressao = props.pressao !== -99 ? `${props.pressao} hPa` : 'N/D';
                     const precipitacao = (props.precipitacao !== undefined && props.precipitacao !== -99) ? `${props.precipitacao} mm` : '0.0 mm';
                     
                     const dataHora = new Date(props.time).toLocaleString('pt-PT');
 
+                    // --- LÓGICA DE CALCULO DOS MÁXIMOS ---
+                    if (hasTemp && tempVal > maxTemp.val) { maxTemp = { val: tempVal, loc: props.localEstacao }; }
+                    if (props.humidade !== -99 && props.humidade > maxHum.val) { maxHum = { val: props.humidade, loc: props.localEstacao }; }
+                    if (props.intensidadeVento !== -99 && props.intensidadeVento > maxWind.val) { maxWind = { val: props.intensidadeVento, loc: props.localEstacao }; }
+                    if (props.pressao !== -99 && props.pressao > maxPress.val) { maxPress = { val: props.pressao, loc: props.localEstacao }; }
+
+                    // Criar Marcador do Mapa
                     const customIcon = L.divIcon({
                         className: 'custom-div-icon',
                         html: `<div class="temp-badge" style="background-color: ${style.bg}; color: ${style.fg};">${tempStr}</div>`,
@@ -212,7 +236,6 @@
                     const getPopupContent = () => {
                         const isDark = html.classList.contains('dark');
                         const textTempColor = isDark ? '#93c5fd' : '#2563eb';
-                        
                         return `
                             <div class="p-1 font-sans text-slate-800 dark:text-slate-100 min-w-[220px]">
                                 <div class="border-b border-slate-200 dark:border-slate-700 pb-2 mb-2">
@@ -247,6 +270,19 @@
                     const marker = L.marker([coords[1], coords[0]], { icon: customIcon }).addTo(markersGroup);
                     marker.bindPopup(getPopupContent, { maxWidth: 300 });
                 });
+
+                // --- ATUALIZAR OS TEXTOS DOS CARDS INTERFACE ---
+                document.getElementById('card-temp-val').textContent = maxTemp.val !== -Infinity ? `${maxTemp.val} °C` : 'N/D';
+                document.getElementById('card-temp-loc').textContent = maxTemp.loc;
+
+                document.getElementById('card-hum-val').textContent = maxHum.val !== -Infinity ? `${maxHum.val} %` : 'N/D';
+                document.getElementById('card-hum-loc').textContent = maxHum.loc;
+
+                document.getElementById('card-wind-val').textContent = maxWind.val !== -Infinity ? `${maxWind.val} km/h` : 'N/D';
+                document.getElementById('card-wind-loc').textContent = maxWind.loc;
+
+                document.getElementById('card-press-val').textContent = maxPress.val !== -Infinity ? `${maxPress.val} hPa` : 'N/D';
+                document.getElementById('card-press-loc').textContent = maxPress.loc;
 
             } catch (error) {
                 console.error('Erro ao processar dados:', error);
