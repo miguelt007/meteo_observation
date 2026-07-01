@@ -13,11 +13,15 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        /* Garante que a página não ganhe barras de rolagem globais */
-        html, body { height: 100%; margin: 0; overflow: hidden; }
+        /* Por padrão (telemóvel), permitimos o scroll na página e definimos uma altura mínima para o mapa */
+        html, body { margin: 0; padding: 0; background-color: #0f172a; }
+        #map { width: 100%; height: 450px; z-index: 1; }
 
-        /* O mapa agora ocupa o espaço restante exato de forma flexível */
-        #map { width: 100%; height: 100%; z-index: 1; }
+        /* Em computadores e tablets grandes (md: 768px para cima), bloqueamos o scroll global e tornamos o mapa flexível */
+        @media (min-width: 768px) {
+            html, body { height: 100%; overflow: hidden; }
+            #map { height: 100%; }
+        }
 
         .temp-badge {
             padding: 3px 6px;
@@ -37,7 +41,7 @@
         .dark .custom-legend-scroll::-webkit-scrollbar-thumb { background: #475569; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 h-screen flex flex-col">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 min-h-screen md:h-screen flex flex-col">
 
     <header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-slate-900 shadow-sm z-10 shrink-0 transition-colors duration-300">
         <div class="flex items-center gap-2">
@@ -93,7 +97,7 @@
         </div>
     </section>
 
-    <main class="flex-1 relative overflow-hidden">
+    <main class="flex-1 relative min-h-0">
         <div id="map"></div>
     </main>
 
@@ -118,6 +122,7 @@
             return scale.find(item => t >= item.min && t < item.max) || { bg: '#94a3b8', fg: '#ffffff' };
         }
 
+        // Dicionário de direções do vento
         function getWindDirection(code) {
             const directions = {
                 1: 'Norte', 2: 'Nordeste', 3: 'Este', 4: 'Sudeste',
@@ -292,7 +297,7 @@
                 document.getElementById('card-press-val').textContent = maxPress.val !== -Infinity ? `${maxPress.val} hPa` : 'N/D';
                 document.getElementById('card-press-loc').textContent = maxPress.loc;
 
-                // Força o mapa a recalcular o tamanho e reposicionar a legenda no sítio certo
+                // Força o Leaflet a ajustar as dimensões internas
                 setTimeout(() => { map.invalidateSize(); }, 200);
 
             } catch (error) {
