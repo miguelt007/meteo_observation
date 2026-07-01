@@ -13,14 +13,16 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        /* Por padrão (telemóvel), permitimos o scroll na página e definimos uma altura mínima para o mapa */
-        html, body { margin: 0; padding: 0; background-color: #0f172a; }
-        #map { width: 100%; height: 450px; z-index: 1; }
+        /* Bloqueia qualquer rolagem global na versão de computador */
+        html, body { margin: 0; padding: 0; background-color: #0f172a; height: 100%; overflow: hidden; }
 
-        /* Em computadores e tablets grandes (md: 768px para cima), bloqueamos o scroll global e tornamos o mapa flexível */
-        @media (min-width: 768px) {
-            html, body { height: 100%; overflow: hidden; }
-            #map { height: 100%; }
+        /* Em computadores, calculamos o espaço exato descontando a Navbar (64px) e os Cards (146px) */
+        #map { width: 100%; height: calc(100vh - 64px - 146px); z-index: 1; }
+
+        /* Em telemóveis, os cartões empilham-se. Deixamos a página rodar e o mapa ganha tamanho fixo amigável */
+        @media (max-width: 768px) {
+            html, body { overflow: auto; height: auto; }
+            #map { height: 480px; }
         }
 
         .temp-badge {
@@ -37,7 +39,7 @@
         .leaflet-bottom { z-index: 500 !important; }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 min-h-screen md:h-screen flex flex-col">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300 flex flex-col">
 
     <header class="h-16 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-4 bg-white dark:bg-slate-900 shadow-sm z-10 shrink-0 transition-colors duration-300">
         <div class="flex items-center gap-2">
@@ -93,7 +95,7 @@
         </div>
     </section>
 
-    <main class="flex-1 relative min-h-0">
+    <main class="w-full">
         <div id="map"></div>
     </main>
 
@@ -101,15 +103,15 @@
         // --- MAPEAMENTO DE CORES ---
         const scale = [
             { min: 40,  max: Infinity, bg: '#af38a4', fg: '#ffffff', label: '≥ 40' },
-            { min: 35,  max: 40,       bg: '#7a001e', fg: '#ffffff', label: '35, 40' },
-            { min: 30,  max: 35,       bg: '#d82d1b', fg: '#ffffff', label: '30, 35' },
-            { min: 25,  max: 30,       bg: '#f16d38', fg: '#ffffff', label: '25, 30' },
-            { min: 20,  max: 25,       bg: '#fba353', fg: '#1e293b', label: '20, 25' },
-            { min: 15,  max: 20,       bg: '#fede8a', fg: '#1e293b', label: '15, 20' },
-            { min: 10,  max: 15,       bg: '#e2f1f8', fg: '#1e293b', label: '10, 15' },
-            { min: 5,   max: 10,       bg: '#a3d7e8', fg: '#1e293b', label: '5, 10' },
-            { min: 0,   max: 5,        bg: '#8593c4', fg: '#ffffff', label: '0, 5' },
-            { min: -5,  max: 0,        bg: '#8c60b3', fg: '#ffffff', label: '-5, 0' },
+            { min: 35,  max: 40,       bg: '#7a001e', fg: '#ffffff', label: '35 a 40' },
+            { min: 30,  max: 35,       bg: '#d82d1b', fg: '#ffffff', label: '30 a 35' },
+            { min: 25,  max: 30,       bg: '#f16d38', fg: '#ffffff', label: '25 a 30' },
+            { min: 20,  max: 25,       bg: '#fba353', fg: '#1e293b', label: '20 a 25' },
+            { min: 15,  max: 20,       bg: '#fede8a', fg: '#1e293b', label: '15 a 20' },
+            { min: 10,  max: 15,       bg: '#e2f1f8', fg: '#1e293b', label: '10 a 15' },
+            { min: 5,   max: 10,       bg: '#a3d7e8', fg: '#1e293b', label: '5 a 10' },
+            { min: 0,   max: 5,        bg: '#8593c4', fg: '#ffffff', label: '0 a 5' },
+            { min: -5,  max: 0,        bg: '#8c60b3', fg: '#ffffff', label: '-5 a 0' },
             { min: -Infinity, max: -5, bg: '#813a96', fg: '#ffffff', label: '< -5' }
         ];
 
@@ -166,7 +168,7 @@
             let legendHtml = `
                 <div class="font-bold border-b border-slate-200 dark:border-slate-700 pb-1 text-sm shrink-0">Legenda</div>
                 <div class="text-[10px] text-slate-500 dark:text-slate-400 my-1 shrink-0">Temp. do ar [°C]</div>
-                <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-1 mt-1">
             `;
             scale.forEach(item => {
                 legendHtml += `
@@ -292,8 +294,8 @@
                 document.getElementById('card-press-val').textContent = maxPress.val !== -Infinity ? `${maxPress.val} hPa` : 'N/D';
                 document.getElementById('card-press-loc').textContent = maxPress.loc;
 
-                // Força o Leaflet a ajustar as dimensões internas
-                setTimeout(() => { map.invalidateSize(); }, 200);
+                // Força o recálculo do tamanho de renderização do mapa e elementos de controlo (legenda)
+                setTimeout(() => { map.invalidateSize(); }, 250);
 
             } catch (error) {
                 console.error('Erro ao processar dados:', error);
