@@ -22,6 +22,18 @@
         }
         
         .leaflet-bottom { z-index: 500 !important; }
+
+        /* Esconde a barra de scroll horizontal e customiza a vertical na legenda para ficar estético */
+        .custom-legend-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-legend-scroll::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark .custom-legend-scroll::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans transition-colors duration-300">
@@ -68,15 +80,8 @@
         // --- CONVERSÃO DA DIREÇÃO DO VENTO ---
         function getWindDirection(code) {
             const directions = {
-                1: 'Norte',
-                2: 'Nordeste',
-                3: 'Este',
-                4: 'Sudeste',
-                5: 'Sul',
-                6: 'Sudoeste',
-                7: 'Oeste',
-                8: 'Noroeste',
-                9: 'Calmo'
+                1: 'Norte', 2: 'Nordeste', 3: 'Este', 4: 'Sudeste',
+                5: 'Sul', 6: 'Sudoeste', 7: 'Oeste', 8: 'Noroeste', 9: 'Calmo'
             };
             return directions[code] || 'N/D';
         }
@@ -124,28 +129,34 @@
 
         updateThemeUI();
 
-        // --- LEGENDA ---
+        // --- LEGENDA COM SCROLL ADAPTÁVEL ---
         const legend = L.control({ position: 'bottomright' });
         legend.onAdd = function () {
-            const div = L.DomUtil.create('div', 'bg-white dark:bg-slate-900 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 font-sans text-xs w-36');
+            // Criada a classe custom-legend-scroll e max-h de modo a caber sempre no ecrã mobile e PC
+            const div = L.DomUtil.create('div', 'bg-white dark:bg-slate-900 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-100 font-sans text-xs w-36 max-h-[180px] md:max-h-[260px] flex flex-col');
             
             let legendHtml = `
-                <div class="font-bold mb-1 border-b border-slate-200 dark:border-slate-700 pb-1 text-sm">Legenda</div>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 mb-2">Temp. do ar [°C]</div>
-                <div class="flex flex-col gap-0.5">
+                <div class="font-bold border-b border-slate-200 dark:border-slate-700 pb-1 text-sm shrink-0">Legenda</div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 my-1 shrink-0">Temp. do ar [°C]</div>
+                <div class="flex flex-col gap-1 overflow-y-auto pr-1 custom-legend-scroll">
             `;
 
             scale.forEach(item => {
                 legendHtml += `
-                    <div class="flex items-center gap-2">
-                        <span class="w-5 h-4 rounded-sm border border-black/10 inline-block" style="background-color: ${item.bg}"></span>
-                        <span class="font-medium">${item.label}</span>
+                    <div class="flex items-center gap-2 shrink-0">
+                        <span class="w-5 h-3.5 rounded-sm border border-black/10 inline-block" style="background-color: ${item.bg}"></span>
+                        <span class="font-medium text-[11px]">${item.label}</span>
                     </div>
                 `;
             });
 
             legendHtml += '</div>';
             div.innerHTML = legendHtml;
+            
+            // Impede que o scroll na legenda faça zoom ou mova o mapa de fundo
+            L.DomEvent.disableScrollPropagation(div);
+            L.DomEvent.disableClickPropagation(div);
+            
             return div;
         };
         legend.addTo(map);
@@ -183,8 +194,6 @@
                     const style = getTempStyle(hasTemp ? tempVal : null);
 
                     const humidade = props.humidade !== -99 ? `${props.humidade} %` : 'N/D';
-                    
-                    // TRATAMENTO DO VENTO COM TEXTO POR EXTENSO
                     const ventoVel = props.intensidadeVento !== -99 ? `${props.intensidadeVento} km/h` : 'N/D';
                     const ventoDirTexto = props.idDireccVento !== -99 ? getWindDirection(props.idDireccVento) : 'N/D';
                     
@@ -238,8 +247,6 @@
                     const marker = L.marker([coords[1], coords[0]], { icon: customIcon }).addTo(markersGroup);
                     marker.bindPopup(getPopupContent, { maxWidth: 300 });
                 });
-
-                console.log(`Dados atualizados com sucesso às ${new Date().toLocaleTimeString('pt-PT')}`);
 
             } catch (error) {
                 console.error('Erro ao processar dados:', error);
