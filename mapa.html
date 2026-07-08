@@ -51,7 +51,7 @@
     </header>
 
     <section class="p-4 bg-slate-100/50 dark:bg-slate-950/40 border-b border-slate-200 dark:border-slate-800 shrink-0 transition-colors duration-300">
-        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             
             <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4 transition-colors duration-300">
                 <div class="p-3 bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-400 rounded-lg text-xl">🌡️</div>
@@ -86,6 +86,15 @@
                     <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Maior Pressão</p>
                     <h4 id="card-press-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
                     <p id="card-press-loc" class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">A carregar...</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4 transition-colors duration-300">
+                <div class="p-3 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-500 dark:text-cyan-400 rounded-lg text-xl">📉</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Menor Pressão</p>
+                    <h4 id="card-min-press-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
+                    <p id="card-min-press-loc" class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">A carregar...</p>
                 </div>
             </div>
 
@@ -210,6 +219,7 @@
                 let maxHum  = { val: -Infinity, loc: 'N/D' };
                 let maxWind = { val: -Infinity, loc: 'N/D' };
                 let maxPress = { val: -Infinity, loc: 'N/D' };
+                let minPress = { val: Infinity, loc: 'N/D' }; // Variável de suporte para a mínima pressão
 
                 stationsArray.forEach(station => {
                     const coords = station.geometry.coordinates;
@@ -243,6 +253,7 @@
                     if (props.humidade !== -99 && props.humidade > maxHum.val) { maxHum = { val: props.humidade, loc: props.localEstacao }; }
                     if (props.intensidadeVento !== -99 && props.intensidadeVento > maxWind.val) { maxWind = { val: props.intensidadeVento, loc: props.localEstacao }; }
                     if (props.pressao !== -99 && props.pressao > maxPress.val) { maxPress = { val: props.pressao, loc: props.localEstacao }; }
+                    if (props.pressao !== -99 && props.pressao < minPress.val) { minPress = { val: props.pressao, loc: props.localEstacao }; }
 
                     const customIcon = L.divIcon({
                         className: 'custom-div-icon',
@@ -300,6 +311,10 @@
 
                 document.getElementById('card-press-val').textContent = maxPress.val !== -Infinity ? `${maxPress.val} hPa` : 'N/D';
                 document.getElementById('card-press-loc').textContent = maxPress.loc;
+
+                // Atualização dos dados do novo cartão de Menor Pressão
+                document.getElementById('card-min-press-val').textContent = minPress.val !== Infinity ? `${minPress.val} hPa` : 'N/D';
+                document.getElementById('card-min-press-loc').textContent = minPress.loc;
 
                 setTimeout(() => { map.invalidateSize(); }, 200);
 
