@@ -51,7 +51,7 @@
     </header>
 
     <section class="p-4 bg-slate-100/50 dark:bg-slate-950/40 border-b border-slate-200 dark:border-slate-800 shrink-0 transition-colors duration-300">
-        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
             
             <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4 transition-colors duration-300">
                 <div class="p-3 bg-red-50 dark:bg-red-950/40 text-red-500 dark:text-red-400 rounded-lg text-xl">🌡️</div>
@@ -63,7 +63,16 @@
             </div>
 
             <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4 transition-colors duration-300">
-                <div class="p-3 bg-blue-50 dark:bg-blue-950/40 text-blue-500 dark:text-blue-400 rounded-lg text-xl">💧</div>
+                <div class="p-3 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg text-xl">🥶</div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Menor Temperatura</p>
+                    <h4 id="card-min-temp-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
+                    <p id="card-min-temp-loc" class="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">A carregar...</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-4 transition-colors duration-300">
+                <div class="p-3 bg-sky-50 dark:bg-sky-950/40 text-sky-500 dark:text-sky-400 rounded-lg text-xl">💧</div>
                 <div class="min-w-0 flex-1">
                     <p class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Maior Humidade</p>
                     <h4 id="card-hum-val" class="text-xl font-bold text-slate-800 dark:text-slate-100 mt-0.5">--</h4>
@@ -216,10 +225,11 @@
                 const stationsArray = Object.values(latestStations);
 
                 let maxTemp = { val: -Infinity, loc: 'N/D' };
+                let minTemp = { val: Infinity, loc: 'N/D' }; // Variável de suporte para a menor temperatura
                 let maxHum  = { val: -Infinity, loc: 'N/D' };
                 let maxWind = { val: -Infinity, loc: 'N/D' };
                 let maxPress = { val: -Infinity, loc: 'N/D' };
-                let minPress = { val: Infinity, loc: 'N/D' }; // Variável de suporte para a mínima pressão
+                let minPress = { val: Infinity, loc: 'N/D' };
 
                 stationsArray.forEach(station => {
                     const coords = station.geometry.coordinates;
@@ -250,6 +260,7 @@
                     });
 
                     if (hasTemp && tempVal > maxTemp.val) { maxTemp = { val: tempVal, loc: props.localEstacao }; }
+                    if (hasTemp && tempVal < minTemp.val) { minTemp = { val: tempVal, loc: props.localEstacao }; } // Guarda a menor temperatura
                     if (props.humidade !== -99 && props.humidade > maxHum.val) { maxHum = { val: props.humidade, loc: props.localEstacao }; }
                     if (props.intensidadeVento !== -99 && props.intensidadeVento > maxWind.val) { maxWind = { val: props.intensidadeVento, loc: props.localEstacao }; }
                     if (props.pressao !== -99 && props.pressao > maxPress.val) { maxPress = { val: props.pressao, loc: props.localEstacao }; }
@@ -303,6 +314,10 @@
                 document.getElementById('card-temp-val').textContent = maxTemp.val !== -Infinity ? `${maxTemp.val} °C` : 'N/D';
                 document.getElementById('card-temp-loc').textContent = maxTemp.loc;
 
+                // Atualização dos dados do novo cartão de Menor Temperatura
+                document.getElementById('card-min-temp-val').textContent = minTemp.val !== Infinity ? `${minTemp.val} °C` : 'N/D';
+                document.getElementById('card-min-temp-loc').textContent = minTemp.loc;
+
                 document.getElementById('card-hum-val').textContent = maxHum.val !== -Infinity ? `${maxHum.val} %` : 'N/D';
                 document.getElementById('card-hum-loc').textContent = maxHum.loc;
 
@@ -312,7 +327,6 @@
                 document.getElementById('card-press-val').textContent = maxPress.val !== -Infinity ? `${maxPress.val} hPa` : 'N/D';
                 document.getElementById('card-press-loc').textContent = maxPress.loc;
 
-                // Atualização dos dados do novo cartão de Menor Pressão
                 document.getElementById('card-min-press-val').textContent = minPress.val !== Infinity ? `${minPress.val} hPa` : 'N/D';
                 document.getElementById('card-min-press-loc').textContent = minPress.loc;
 
